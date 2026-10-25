@@ -1,4 +1,5 @@
 import { createServer } from 'node:http'
+import { sendJson } from './http.mjs'
 
 const routes = new Map([
   ['/api/movies/popular', '/3/movie/popular'],
@@ -7,23 +8,12 @@ const routes = new Map([
   ['/api/genres', '/3/genre/movie/list'],
 ])
 
-function sendJson(response, status, body, headers = {}) {
-  if (response.destroyed || response.writableEnded) return
-  response.writeHead(status, {
-    'Content-Type': 'application/json; charset=utf-8',
-    'Cache-Control': 'no-store',
-    'X-Content-Type-Options': 'nosniff',
-    ...headers,
-  })
-  response.end(JSON.stringify(body))
-}
-
-export function createProxyServer({
+export function createProxyHandler({
   token = '',
   fetchImpl = fetch,
   timeoutMs = 8000,
 } = {}) {
-  return createServer(async (request, response) => {
+  return async (request, response) => {
     let url
     try {
       url = new URL(request.url ?? '/', 'http://localhost')
@@ -184,5 +174,10 @@ export function createProxyServer({
       request.off('aborted', cancel)
       response.off('close', cancel)
     }
-  })
+  }
+}
+
+// Giữ factory hiện có cho các test TMDB; app server ghép cùng Register handler.
+export function createProxyServer(options) {
+  return createServer(createProxyHandler(options))
 }

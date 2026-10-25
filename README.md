@@ -1,6 +1,24 @@
-# Cineverse — Phase 5.6: Top Cast & Director
+# Cineverse — Phase 6.2E: Auth UI Refinement & Password Recovery
 
 React + TypeScript + Vite với giao diện Minimal Editorial Cinema. Dữ liệu phim được tải qua proxy Node.js cục bộ; token TMDB chỉ nằm trên server.
+
+Backend dùng Node.js, PostgreSQL và Prisma 7; mật khẩu hash Argon2id, phiên đăng nhập lưu phía server với cookie HTTP-only. Frontend dùng React Router, API service và custom hooks.
+
+Phase 6.2E cân bằng bốn trang Auth: container 1100px, hai cột khoảng 53/47, form tối đa 440px, thu gọn intro trên mobile và footer nằm cuối viewport tự nhiên. Forgot phân biệt validation/rate limit/email chưa sẵn sàng/lỗi hệ thống/network, không báo đã gửi khi delivery lỗi. Không thay backend auth/migration/password policy hoặc `.env`. **Mailpit chưa được phát hiện trên máy; chưa kiểm chứng gửi/nhận qua Mailpit thật.** Xem [audit, file thay đổi, hướng dẫn Windows và checklist Forgot → Reset](docs/phase-6.2e-auth-refinement.md).
+
+Phase 6.2D thêm **/forgot-password**, **/reset-password** và liên kết Quên mật khẩu tại Login. Backend có hai POST recovery, token ngẫu nhiên 256 bit lưu SHA-256, hết hạn 20 phút, dùng một lần; đổi mật khẩu Argon2id và thu hồi session trong cùng transaction. Migration chỉ thêm PasswordResetToken, số User/Session được xác nhận không đổi. **Email mặc định tắt: cần cấu hình SMTP hoặc Mailpit local trước khi nhận thư.** Không có thông báo gửi thành công khi chưa có email delivery. Đọc [file thay đổi, luồng bảo mật, cấu hình email và kiểm thử Phase 6.2D](docs/phase-6.2d-password-recovery.md).
+
+Phase 6.2C thêm giao diện **/register**, **/login**, AuthProvider/useAuth, kiểm tra phiên khi mở website và menu tài khoản trên Header. Form có validation/lỗi từng trường, hiện/ẩn password, loading và chặn submit lặp. Register thành công đưa tới Login; Login không reload trang; Logout chỉ cập nhật guest khi API xác nhận 204. Đọc [hướng dẫn kiến trúc React, file thay đổi, kiểm thử và thao tác trên browser](docs/phase-6.2c-auth-ui.md).
+
+Mở URL Vite thông báo sau `npm.cmd run dev`, chọn **Đăng nhập → Đăng ký** để thử giao diện. Cookie HTTP-only do browser quản lý; React chỉ giữ user DTO trong RAM và gọi `/api/auth/me` khi khởi động. Lỗi mạng khi kiểm tra phiên có nút thử lại, không tự kết luận session hết hạn. Không ghi token/password vào localStorage/sessionStorage. Backend, migration và database không thay đổi trong Phase 6.2C; Phase 6.2D bổ sung recovery như mô tả ở trên.
+
+Phase 6.2B thêm **POST /api/auth/login**, **GET /api/auth/me**, **POST /api/auth/logout**, Session lưu trong PostgreSQL và cookie HTTP-only 7 ngày. Token ngẫu nhiên 256 bit chỉ đi qua cookie; database lưu SHA-256 token. Migration Session đã áp dụng, tài khoản hiện có được giữ nguyên. Đọc [hướng dẫn Login/Me/Logout, PowerShell, restart và bảo mật](docs/phase-6.2b-login-session.md).
+
+**Thay đổi cần lưu ý khi gọi API:** mọi POST `/api/auth/*` (gồm Forgot/Reset) cần header `X-Cineverse-CSRF: 1` và JSON. Browser Origin phải nằm trong `AUTH_ALLOWED_ORIGINS` (mặc định localhost/127.0.0.1 cổng 5173). CLI không gửi Origin vẫn cần custom header. Frontend dùng URL `/api/...` cùng origin qua Vite; không bật CORS credentials hoặc wildcard.
+
+Phase 6.2A thêm **POST /api/auth/register** trên HTTP server Node hiện có: validation backend, Argon2id, lưu User bằng Prisma, response chỉ có id/name/email/createdAt, xử lý email trùng và rate limit. Register tiếp tục hoạt động, cần custom header CSRF theo Phase 6.2B. Xem [hướng dẫn Register](docs/phase-6.2a-register.md).
+
+Phase 6.1 bổ sung nền tảng PostgreSQL local và Prisma 7.10.1 cho backend Node.js hiện có: model User, migration SQL đầu tiên, Prisma Client khởi tạo khi cần và CLI kiểm tra kết nối. Chưa triển khai Authentication. TMDB hoạt động độc lập với database. Đọc [hướng dẫn cấu hình, kiến trúc, file thay đổi và bài tập database](docs/phase-6.1-database.md).
 
 Phase 5.6 thêm đạo diễn trong metadata và Dàn diễn viên chính sau nội dung phim. Credits được gộp vào request chi tiết; không gọi API riêng cho từng người. Danh sách cast có một hàng ban đầu, Xem thêm / Thu gọn độc lập với phim gợi ý. Xem [báo cáo, types/parser/mapper, kiểm thử và bài tập Phase 5.6](docs/phase-5.6-cast.md).
 
@@ -14,6 +32,7 @@ Yêu cầu Node.js 22.18+ và npm. Từ PowerShell:
 
 ```powershell
 cd D:\LearnReact\Cineverse
+npm.cmd install
 npm.cmd --prefix frontend install
 if (-not (Test-Path backend\.env)) { Copy-Item backend\.env.example backend\.env }
 ```
@@ -30,7 +49,54 @@ Lệnh này chạy cả proxy tại **127.0.0.1:3001** và Vite, thường tại
 
 Nếu terminal đang ở `D:\LearnReact\Cineverse\frontend`, `npm.cmd run dev` cũng chạy cả hai server. Script đợi backend báo đã lắng nghe rồi mới khởi động Vite; các tham số như `-- --host 127.0.0.1` được chuyển cho Vite.
 
-Không cần cài thư viện hoặc database cho backend. Chỉ npm install trong frontend là đủ.
+Root quản lý dependencies backend (Prisma, PostgreSQL adapter); frontend có package.json riêng. Không cần cài lại PostgreSQL. Khi chỉ khám phá phim qua TMDB, database chưa cấu hình hoặc tạm dừng vẫn không ngăn `npm.cmd run dev` khởi động.
+
+## Email development với Mailpit
+
+Mailpit là mail catcher local: **thư được giữ trong inbox thử nghiệm, không gửi tới hộp thư Internet** khi không bật forwarding/relay. Tự cài binary Windows theo [hướng dẫn chính thức](https://mailpit.axllent.org/docs/install/), rồi mở PowerShell tại thư mục chứa executable:
+
+```powershell
+.\mailpit.exe --smtp 127.0.0.1:1025 --listen 127.0.0.1:8025 --quiet
+```
+
+Trong `backend/.env`, dùng các cấu hình mẫu ở `.env.example`: đặt `PASSWORD_RESET_EMAIL_MODE=local`, SMTP loopback `127.0.0.1:1025`, `SMTP_SECURE=false`, không username/password; `PUBLIC_APP_ORIGIN` phải khớp origin frontend và `AUTH_ALLOWED_ORIGINS`. Giữ nguyên credentials TMDB/database. Restart `npm.cmd run dev`, mở inbox tại `http://127.0.0.1:8025` và thử Forgot bằng tài khoản test riêng. Chưa cấu hình hoặc Mailpit không chạy thì UI báo dịch vụ gửi thư chưa sẵn sàng. [Hướng dẫn Windows, cấu hình đầy đủ và checklist Forgot → Reset](docs/phase-6.2e-auth-refinement.md#chạy-mailpit-trên-windows).
+
+## PostgreSQL local — Phase 6.1
+
+Database đã được bạn tạo bằng pgAdmin: `localhost:5432/cineverse_dev`, schema `public`. Chỉ sửa dòng `DATABASE_URL` trong **backend/.env**, giữ nguyên `TMDB_READ_ACCESS_TOKEN`:
+
+```dotenv
+DATABASE_URL="postgresql://postgres:<PASSWORD>@localhost:5432/cineverse_dev?schema=public"
+```
+
+Thay `<PASSWORD>` bằng mật khẩu thật đã URL-encode, chỉ ở máy của bạn. Ví dụ ký tự `@` → `%40`, `#` → `%23`, `%` → `%25`; encode phần mật khẩu, không encode toàn bộ URL. Không gửi URL/mật khẩu vào chat, Git hay công cụ encode trực tuyến. Có thể để `DATABASE_URL=""` khi chưa thiết lập; validate/generate vẫn chạy được.
+
+Chạy các lệnh sau **từ thư mục gốc**:
+
+```powershell
+npm.cmd run db:validate
+npm.cmd run db:generate
+npm.cmd run db:check
+# Sau khi kết nối đúng và đã kiểm tra các đối tượng hiện hữu:
+npm.cmd run db:migrate
+npm.cmd run db:check
+```
+
+Database hiện đã áp dụng `init_user_model`, `add_session_model` và `add_password_reset_token`. Các cột User/Session giữ nguyên; PasswordResetToken là bảng mới có foreign key tới User. `db:migrate` kiểm tra database, inventory, thứ tự/checksum lịch sử và schema drift trước khi áp dụng ba migration đã review bằng `migrate deploy`. Chạy lại khi đã đủ migration chỉ kiểm tra và không ghi database. Không reset, không seed và không tác động database khác. Migration tiếp theo cần mở rộng guard có kiểm thử.
+
+Ở bước này dùng SQL sinh offline rồi apply để không tạo/xóa shadow database của `migrate dev`. Snapshot User trong `backend/prisma/baselines/user.prisma` dùng trước Session; snapshot `session.prisma` dùng trước PasswordResetToken. Xem [migration và email recovery](docs/phase-6.2d-password-recovery.md).
+
+| Lệnh tại root                     | Nhiệm vụ                                                                      |
+| --------------------------------- | ----------------------------------------------------------------------------- |
+| `npm.cmd run db:validate`         | Kiểm tra schema, không cần database                                           |
+| `npm.cmd run db:generate`         | Sinh client vào backend/generated/prisma; không tạo bảng                      |
+| `npm.cmd run db:migrate:create`   | In SQL từ baseline User+Session tới schema hiện tại, không thực thi SQL       |
+| `npm.cmd run db:migrate`          | Kiểm tra an toàn/drift và áp dụng ba migration đã review                      |
+| `npm.cmd run db:check`            | Kết nối chỉ đọc, kiểm tra metadata/model, không in người dùng hay credentials |
+| `npm.cmd run db:studio`           | Mở Studio local; mở URL terminal thông báo, Ctrl+C để dừng                    |
+| `npm.cmd run db:sessions:cleanup` | Xóa tối đa 1000 session đã hết hạn/lần, không xóa User hoặc session còn hạn   |
+
+Sau khi migration thành công, trong pgAdmin: **Servers → server local → Databases → cineverse_dev → Schemas → public → Tables → Refresh → User**. Chọn Properties để xem cột/index, hoặc View/Edit Data → All Rows để xem bảng (ban đầu rỗng). `_prisma_migrations` lưu lịch sử kỹ thuật của Prisma. Không nhập mật khẩu gốc vào passwordHash.
 
 ## Đã sửa lỗi ECONNREFUSED cổng 3001
 
@@ -64,6 +130,25 @@ Hiện tại, lệnh `dev` ở cả thư mục gốc lẫn `frontend` đều ch�
 Nếu chưa có token, UI sẽ báo chưa cấu hình kết nối. Không tự chuyển sang phim mẫu. Dữ liệu/ảnh mẫu cũ vẫn lưu để tham khảo, không còn là nguồn runtime.
 
 ## Endpoints và luồng dữ liệu
+
+```text
+POST /api/auth/login  → verify Argon2id → tạo Session → Set-Cookie HTTP-only
+GET  /api/auth/me     → cookie → SHA-256 → tra Session + expiry → user DTO
+POST /api/auth/logout → xóa đúng Session → clear cookie → 204
+POST /api/auth/forgot-password → validate/rate limit → token hash → SMTP → 200 thông báo chung
+POST /api/auth/reset-password  → token hợp lệ → transaction đổi hash + xóa token/session → 200
+```
+
+Login sai email/password trả cùng 401, có dummy verification. Giới hạn Login 20 lần/IP và 10 lần/định danh HMAC trong 15 phút, tối đa 2 thao tác đồng thời. Mỗi User tối đa 5 session; login mới thu hồi phiên cũ nhất nếu vượt giới hạn. Cookie development dùng `cineverse_session`, HTTP-only/SameSite=Lax/Path=/; production bắt buộc `__Host-cineverse_session` + Secure và danh sách HTTPS Origin rõ ràng. Giao diện tài khoản gọi API cùng origin qua Vite, không dùng JWT hoặc lưu token trong Web Storage.
+
+```text
+POST /api/auth/register → validation → Argon2id → Prisma User.create → PostgreSQL
+                       ← 201 { user: { id, name, email, createdAt } }
+```
+
+Body JSON gồm `name`, `email`, `password`. Tên trim, tối đa 100 ký tự; email trim/lowercase, tối đa 254; password giữ nguyên, từ 12 đến 128 ký tự. Body tối đa 16 KB. Trả 400/409/413/415/429/500/503 tương ứng lỗi validation, email trùng, body lớn, media type, rate limit, nội bộ hoặc dịch vụ chưa sẵn sàng. Request gửi body quá chậm trả 408; method khác POST trả 405.
+
+Register giới hạn 5 lần/IP/15 phút và tối đa 2 thao tác đồng thời; bộ giới hạn chỉ ở memory của một process. HTTP 409 vẫn tiết lộ email đã tồn tại, rate limit chỉ giảm nguy cơ dò tài khoản. Đọc [cách gửi request và xác minh User an toàn](docs/phase-6.2a-register.md#kiểm-tra-thực-tế-bằng-powershell).
 
 ```text
 React → /api/movies/popular      → TMDB /3/movie/popular
@@ -122,6 +207,12 @@ Có thể chạy riêng bằng npm.cmd run dev:proxy và npm.cmd run dev:fronten
 
 Đọc tiếp:
 
+- [Phase 6.2E — Auth layout, chẩn đoán lỗi Forgot, Mailpit Windows và checklist kiểm thử](docs/phase-6.2e-auth-refinement.md).
+- [Phase 6.2D — Forgot/Reset, SMTP/Mailpit, migration, bảo mật token và kiểm thử](docs/phase-6.2d-password-recovery.md).
+- [Phase 6.2C — AuthProvider/useAuth, forms, API service, kiểm thử và hướng dẫn browser](docs/phase-6.2c-auth-ui.md).
+- [Phase 6.2B — PostgreSQL session, Login/Me/Logout, CSRF/cookies, kiểm thử và PowerShell](docs/phase-6.2b-login-session.md).
+- [Phase 6.2A — Backend Register API, Argon2id, validation, tests và thực hành PowerShell](docs/phase-6.2a-register.md).
+- [Phase 6.1 — PostgreSQL, Prisma, migration, DATABASE_URL, pgAdmin và 3 bài tập](docs/phase-6.1-database.md).
 - [Phase 5.6 — Top Cast & Director, types/parser/mapper, kiểm thử và bài tập](docs/phase-5.6-cast.md).
 - [Phase 5.5 — UI compact, danh sách file, cách hoạt động, kiểm thử và bài học](docs/phase-5.5-ui.md).
 - [Giai đoạn 5 — kiến trúc, file thay đổi, giới hạn](docs/phase-5-architecture.md).
@@ -138,4 +229,8 @@ Có thể chạy riêng bằng npm.cmd run dev:proxy và npm.cmd run dev:fronten
 
 **Xác minh Phase 5.6:** 57 test đạt (20 backend, 37 frontend), lint/TypeScript/build đạt. Browser mới kiểm tra cast/đạo diễn/ảnh/order/mở thu/reset ID ở 320/390/768/1024/1440px, và TMDB thật cho Inception: 52 cast, Christopher Nolan, không thêm API request khi mở/thu. Kiểm thử hồi quy browser Phase 5 và compact Phase 5.5 đều đạt.
 
-Dừng tại Phase 5.6. Chưa có đăng nhập, database, Favorites hoặc phát phim đầy đủ. Khi đưa SPA lên hosting sau này cần cấu hình fallback các URL giao diện về index.html; hiện đã kiểm tra URL trực tiếp/refresh trên Vite cục bộ.
+**Xác minh Phase 6.2D:** 131 test đạt (83 backend, 48 frontend); lint/typecheck/build và kiểm thử Edge auth/recovery + hồi quy phim/compact/cast đạt. Migration thêm bảng token, kiểm tra lại không drift; số User/Session không đổi. Live TMDB vẫn hoạt động; email chưa cấu hình trả 503 đúng và không ghi dữ liệu. SMTP đã thử bằng Nodemailer + catcher giả lập loopback, chưa xác minh provider Internet. Chi tiết nằm trong tài liệu Phase 6.2D.
+
+**Xác minh Phase 6.2E:** 134 tests đạt (84 backend, 50 frontend), lint/typecheck/build đạt. Edge kiểm tra bốn trang Auth ở 320/375/768/1024/1440/1920px, keyboard/focus/validation/footer/overflow và lỗi SMTP disabled/refused; hồi quy Auth/recovery/Home/Details/Search/compact/cast đạt. Mailpit thật và SMTP Internet chưa xác minh; không sửa `.env`, migration hay tài khoản thật. Xem tài liệu Phase 6.2E để tự thiết lập và chạy checklist.
+
+Dừng tại Phase 6.2E. Auth UI đã tinh chỉnh; email delivery vẫn cần người dùng cấu hình để nhận link thật. Source thực tế chưa có danh sách Favorites: nút Yêu thích vẫn chưa kích hoạt. Chưa thêm JWT/OAuth/MFA hoặc phát phim đầy đủ. Khi đưa SPA lên hosting cần fallback các URL giao diện về index.html, đặt no-store cho trang recovery và Referrer-Policy: no-referrer; xem tài liệu Phase 6.2D/6.2E.

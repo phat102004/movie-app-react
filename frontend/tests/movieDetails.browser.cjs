@@ -86,6 +86,11 @@ async function fixturePage(browser, options = {}) {
   )
   await page.route('**/api/**', async (route) => {
     const pathname = new URL(route.request().url()).pathname
+    if (pathname === '/api/auth/me')
+      return route.fulfill({
+        status: 401,
+        json: { error: { code: 'UNAUTHENTICATED' } },
+      })
     requests.push(pathname)
     if (options.handler && (await options.handler(route, pathname))) return
     if (pathname === '/api/genres') return route.fulfill({ json: { genres } })

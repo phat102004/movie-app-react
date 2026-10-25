@@ -1,12 +1,12 @@
-import { existsSync } from 'node:fs'
-import { loadEnvFile } from 'node:process'
-import { fileURLToPath } from 'node:url'
-import { createProxyServer } from './proxy.mjs'
+import { loadBackendEnv } from './env.mjs'
+import { disconnectDatabase } from './database/client.mjs'
+import { createAppServer } from './server.mjs'
 
-const envPath = fileURLToPath(new URL('./.env', import.meta.url))
-if (existsSync(envPath)) loadEnvFile(envPath)
+loadBackendEnv()
 
-const server = createProxyServer({ token: process.env.TMDB_READ_ACCESS_TOKEN })
+const server = createAppServer({
+  tmdb: { token: process.env.TMDB_READ_ACCESS_TOKEN },
+})
 server.on('error', (error) => {
   console.error(
     error.code === 'EADDRINUSE'
@@ -23,7 +23,14 @@ server.listen(3001, '127.0.0.1', () => {
 
 for (const signal of ['SIGINT', 'SIGTERM']) {
   process.on(signal, () => {
-    server.close()
+    server.close(() => {
+      disconnectDatabase().catch(() => {
+        console.error(
+          'Không thể đóng database bình thường; đã ẩn chi tiết nội bộ.',
+        )
+        process.exitCode = 1
+      })
+    })
     server.closeAllConnections()
   })
 }

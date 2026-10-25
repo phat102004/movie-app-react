@@ -12,6 +12,23 @@
     "typecheck": "npm --prefix frontend run typecheck",
     "lint": "node frontend/node_modules/oxlint/bin/oxlint -c frontend/.oxlintrc.json frontend backend scripts",
     "build": "npm --prefix frontend run build",
-    "test": "node --test backend/tests/*.test.mjs && npm --prefix frontend test"
+    "test": "node --test backend/tests/*.test.mjs && npm --prefix frontend test",
+    "db:validate": "prisma validate --config backend/prisma.config.mjs",
+    "db:generate": "prisma generate --config backend/prisma.config.mjs",
+    "db:migrate:create": "prisma migrate diff --config backend/prisma.config.mjs --from-schema backend/prisma/baselines/session.prisma --to-schema backend/prisma/schema.prisma --script",
+    "db:migrate": "node backend/scripts/migrate.mjs",
+    "db:studio": "prisma studio --config backend/prisma.config.mjs --browser none",
+    "db:check": "node backend/scripts/check-database.mjs",
+    "db:sessions:cleanup": "node backend/scripts/cleanup-sessions.mjs"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "7.10.1",
+    "@prisma/client": "7.10.1",
+    "argon2": "0.45.1",
+    "nodemailer": "10.2.1",
+    "pg": "8.23.1"
+  },
+  "devDependencies": {
+    "prisma": "7.10.1"
   }
 }

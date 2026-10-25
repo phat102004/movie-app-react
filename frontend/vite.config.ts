@@ -5,9 +5,11 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   plugins: [react()],
   server: {
+    headers: { 'Referrer-Policy': 'no-referrer', 'Cache-Control': 'no-store' },
     proxy: { '/api': 'http://127.0.0.1:3001' },
   },
   preview: {
+    headers: { 'Referrer-Policy': 'no-referrer', 'Cache-Control': 'no-store' },
     proxy: { '/api': 'http://127.0.0.1:3001' },
   },
 })

@@ -48,6 +48,11 @@ async function setup(browser, width = 1440) {
   )
   await page.route('**/api/**', (route) => {
     const pathname = new URL(route.request().url()).pathname
+    if (pathname === '/api/auth/me')
+      return route.fulfill({
+        status: 401,
+        json: { error: { code: 'UNAUTHENTICATED' } },
+      })
     requests.push(pathname)
     if (pathname === '/api/genres') return route.fulfill({ json: { genres } })
     const lists = { popular, now_playing: recent, top_rated: rated }

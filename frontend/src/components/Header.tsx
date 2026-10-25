@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, NavLink } from 'react-router'
 import { Icon } from './Icon'
 import { SearchBar } from './SearchBar'
+import { AccountMenu } from './AccountMenu'
 import './Header.css'
 
 type HeaderProps = {
@@ -80,6 +81,7 @@ export function Header({ searchQuery, onSearchQueryChange }: HeaderProps) {
 
         <SearchBar query={searchQuery} onQueryChange={onSearchQueryChange} />
         <div className="header-actions">
+          <AccountMenu />
           <button
             id="menu-toggle"
             className="icon-button menu-toggle"

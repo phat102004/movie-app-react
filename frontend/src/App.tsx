@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Route, Routes, useLocation, useNavigate } from 'react-router'
 import { Header } from './components/Header'
 import { RouteFocus } from './components/RouteFocus'
@@ -6,12 +6,27 @@ import { TmdbAttribution } from './components/TmdbAttribution'
 import { HomePage } from './pages/HomePage'
 import { MovieDetailsPage } from './pages/MovieDetailsPage'
 import { NotFoundPage } from './pages/NotFoundPage'
+import { LoginPage } from './pages/LoginPage'
+import { RegisterPage } from './pages/RegisterPage'
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
+import { ResetPasswordPage } from './pages/ResetPasswordPage'
+import { clearResetToken } from './utils/resetToken'
+import { AuthSessionNotice } from './components/AuthSessionNotice'
 import { defaultMovieFilters } from './data/movieFilters'
 import { useMovies } from './hooks/useMovies'
 import type { MovieFilterValues } from './types/movieFilters'
 
 function App() {
-  const { pathname } = useLocation()
+  const { pathname, key } = useLocation()
+  const isAuthPage = [
+    '/login',
+    '/register',
+    '/forgot-password',
+    '/reset-password',
+  ].includes(pathname)
+  useEffect(() => {
+    if (pathname !== '/reset-password') clearResetToken()
+  }, [pathname])
   const navigate = useNavigate()
   // Hook và State ở ngoài Routes nên không bị mất khi mở trang chi tiết.
   const catalog = useMovies(pathname === '/')
@@ -29,7 +44,7 @@ function App() {
   }
 
   return (
-    <div id="home">
+    <div id="home" className="site-shell">
       <a className="skip-link" href="#main-content">
         Đi đến nội dung chính
       </a>
@@ -37,7 +52,12 @@ function App() {
         searchQuery={searchQuery}
         onSearchQueryChange={handleSearchChange}
       />
-      <main id="main-content" tabIndex={-1}>
+      <AuthSessionNotice />
+      <main
+        id="main-content"
+        className={isAuthPage ? 'auth-main' : undefined}
+        tabIndex={-1}
+      >
         <Routes>
           <Route
             path="/"
@@ -52,6 +72,13 @@ function App() {
             }
           />
           <Route path="/movies/:movieId" element={<MovieDetailsPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route
+            path="/reset-password"
+            element={<ResetPasswordPage key={key} />}
+          />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>

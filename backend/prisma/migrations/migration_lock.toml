@@ -1,0 +1,2 @@
+# Giữ file này trong Git cùng schema và migration SQL.
+provider = "postgresql"

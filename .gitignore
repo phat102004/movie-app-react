@@ -31,6 +31,32 @@ coverage/
 
 # Local data
 .local/
+logs/
+mailpit/
+mailpit-data/
+mailpit.exe
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+*.dump
+*.backup
+*.bak
+*.eml
+*.har
+playwright-report/
+test-results/
+
+# Private key material
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Prisma Client được sinh cục bộ bằng npm.cmd run db:generate
+backend/generated/
 
 # OS files
 .DS_Store
