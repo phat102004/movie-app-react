@@ -1,0 +1,30 @@
+.tmdb-attribution {
+  display: flex;
+  align-items: center;
+  flex-basis: 100%;
+  gap: 20px;
+  padding-top: 22px;
+  border-top: 1px solid var(--border);
+}
+.tmdb-attribution img {
+  display: block;
+  width: 72px;
+  height: auto;
+}
+.tmdb-attribution a {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  min-height: 44px;
+}
+.tmdb-attribution p {
+  max-width: 560px;
+  font-size: 11px;
+}
+@media (max-width: 760px) {
+  .tmdb-attribution {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+}

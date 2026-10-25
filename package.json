@@ -1,0 +1,17 @@
+{
+  "name": "cineverse",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:proxy": "node backend/index.mjs",
+    "dev:frontend": "npm --prefix frontend run dev:only",
+    "typecheck": "npm --prefix frontend run typecheck",
+    "lint": "node frontend/node_modules/oxlint/bin/oxlint -c frontend/.oxlintrc.json frontend backend scripts",
+    "build": "npm --prefix frontend run build",
+    "test": "node --test backend/tests/*.test.mjs && npm --prefix frontend test"
+  }
+}

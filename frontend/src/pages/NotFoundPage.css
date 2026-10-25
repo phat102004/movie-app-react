@@ -1,0 +1,22 @@
+.not-found {
+  min-height: 65vh;
+  padding-block: clamp(64px, 10vw, 120px);
+}
+.not-found-number {
+  margin: 0 0 24px;
+  font: 100px/1 var(--font-editorial);
+  letter-spacing: -6px;
+}
+.not-found-number span {
+  color: var(--accent);
+}
+.not-found h1 {
+  max-width: 720px;
+  margin: 16px 0;
+  font: 400 clamp(32px, 5vw, 58px)/1.15 var(--font-editorial);
+}
+.not-found-description {
+  max-width: 520px;
+  margin-bottom: 30px;
+  color: var(--muted);
+}

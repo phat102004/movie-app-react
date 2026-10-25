@@ -1,0 +1,137 @@
+.site-header {
+  position: relative;
+  z-index: 10;
+  border-bottom: 1px solid var(--border-strong);
+  background: var(--background);
+}
+.header-inner {
+  display: flex;
+  align-items: center;
+  gap: clamp(24px, 3vw, 48px);
+  min-height: 104px;
+}
+.brand {
+  flex-shrink: 0;
+  color: var(--text);
+  font-family: var(--font-editorial);
+  font-size: 28px;
+  font-weight: 400;
+  letter-spacing: -1.2px;
+  text-decoration: none;
+}
+.brand > span:first-child {
+  color: inherit;
+}
+.brand-dot {
+  color: var(--accent);
+}
+.main-navigation {
+  display: flex;
+  align-items: center;
+  gap: 26px;
+}
+.nav-link {
+  position: relative;
+  min-height: 44px;
+  padding: 12px 0;
+  border: 0;
+  color: var(--muted);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.nav-link.is-active {
+  color: var(--text);
+}
+.nav-link.is-active::after {
+  position: absolute;
+  right: 0;
+  bottom: 4px;
+  left: 0;
+  height: 1px;
+  background: var(--accent);
+  content: '';
+}
+.nav-link:hover:not(:disabled) {
+  color: var(--accent-strong);
+}
+.header-actions {
+  display: none;
+  align-items: center;
+  margin-left: auto;
+}
+.icon-button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 10px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+}
+.icon-button:hover {
+  background: var(--accent-soft);
+}
+.menu-toggle {
+  display: none;
+}
+
+@media (max-width: 1150px) {
+  .header-inner {
+    gap: 24px;
+  }
+  .main-navigation {
+    gap: 18px;
+  }
+}
+
+@media (max-width: 760px) {
+  .header-inner {
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    min-height: 0;
+    padding-block: 16px;
+  }
+  .brand {
+    font-size: 26px;
+  }
+  .header-actions {
+    display: flex;
+  }
+  .menu-toggle {
+    display: grid;
+  }
+  .main-navigation {
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    left: 0;
+    padding: 12px var(--page-gutter) 20px;
+    border-bottom: 1px solid var(--border-strong);
+    background: var(--background);
+  }
+  .main-navigation.is-open {
+    display: flex;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .nav-link {
+    padding: 14px 12px;
+    text-align: left;
+  }
+  .nav-link.is-active {
+    background: var(--accent-soft);
+  }
+  .nav-link.is-active::after {
+    top: 14px;
+    bottom: 14px;
+    left: 0;
+    width: 2px;
+    height: auto;
+  }
+}

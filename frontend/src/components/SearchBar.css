@@ -1,0 +1,76 @@
+.search-bar {
+  display: flex;
+  align-items: center;
+  flex: 0 1 250px;
+  gap: 10px;
+  min-width: 170px;
+  min-height: 44px;
+  margin-left: auto;
+  border-bottom: 1px solid var(--border-strong);
+  color: var(--muted);
+}
+.search-bar:focus-within {
+  border-color: var(--accent-strong);
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+.search-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.search-bar > .icon {
+  width: 17px;
+  height: 17px;
+}
+.search-bar input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+}
+.search-bar input::placeholder {
+  color: var(--muted);
+}
+/* Giữ nút xóa React để hành vi nhất quán giữa các trình duyệt. */
+.search-bar input::-webkit-search-cancel-button {
+  appearance: none;
+}
+.search-clear {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 12px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+}
+.search-clear .icon {
+  width: 16px;
+  height: 16px;
+}
+.search-clear:hover {
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
+@media (max-width: 760px) {
+  .search-bar {
+    order: 2;
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+  .search-bar input {
+    font-size: 16px;
+  }
+}
