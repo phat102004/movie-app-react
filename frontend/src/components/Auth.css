@@ -68,6 +68,69 @@
   margin: 0 0 24px;
   font: 400 32px/1.2 var(--font-editorial);
 }
+
+/* Welcome Panel dùng chung cho Login/Register; recovery giữ layout hiện tại. */
+.auth-page--welcome {
+  --welcome-background: #4c5d46;
+  --welcome-text: #f6f3ed;
+  grid-template-columns: minmax(0, 1.222222fr) minmax(0, 1fr);
+  align-items: stretch;
+  max-width: 1140px;
+  gap: clamp(24px, 2.3vw, 32px);
+}
+.auth-page--welcome .auth-intro {
+  display: flex;
+  flex-direction: column;
+  min-height: 520px;
+  padding: clamp(40px, 4vw, 56px);
+  border: 1px solid var(--welcome-background);
+  border-radius: 6px;
+  color: var(--welcome-text);
+  background: var(--welcome-background);
+}
+.auth-page--welcome .auth-back {
+  align-self: flex-start;
+  margin-bottom: 36px;
+  padding-block: 4px;
+  color: var(--welcome-text);
+}
+.auth-page--welcome .auth-back:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.auth-page--welcome .auth-back:focus-visible {
+  outline-color: var(--welcome-text);
+}
+.auth-page--welcome .auth-eyebrow {
+  margin: 0;
+  padding-top: 22px;
+  border-top: 1px solid #f6f3ed52;
+  color: var(--welcome-text);
+}
+.auth-page--welcome .auth-intro h1 {
+  margin-block: 24px 20px;
+  font-size: clamp(42px, 4.3vw, 60px);
+}
+.auth-page--welcome .auth-intro h1 em,
+.auth-page--welcome .auth-intro > p:not(.auth-eyebrow) {
+  color: var(--welcome-text);
+}
+.auth-page--welcome .auth-intro > p:not(.auth-eyebrow) {
+  margin-block: 0 36px;
+  line-height: 1.7;
+}
+.auth-page--welcome .auth-editorial-note {
+  margin-top: auto;
+  padding-top: 22px;
+  border-color: #f6f3ed52;
+  color: var(--welcome-text);
+}
+.auth-page--welcome .auth-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border-radius: 6px;
+}
 .auth-field {
   margin-top: 20px;
 }
@@ -368,6 +431,45 @@
 @media (max-width: 375px) {
   .auth-card {
     padding: 24px 20px;
+  }
+}
+
+@media (max-width: 820px) {
+  .auth-page--welcome {
+    grid-template-columns: 1fr;
+    max-width: 560px;
+    gap: 16px;
+  }
+  .auth-page--welcome .auth-intro {
+    justify-self: center;
+    width: 100%;
+    max-width: 440px;
+    min-height: 0;
+    padding: 24px;
+  }
+  .auth-page--welcome .auth-back {
+    margin-bottom: 12px;
+    font-size: 12px;
+  }
+  .auth-page--welcome .auth-eyebrow {
+    padding-top: 12px;
+    font-size: 9px;
+    letter-spacing: 1.5px;
+  }
+  .auth-page--welcome .auth-intro h1 {
+    margin-block: 14px 12px;
+    font-size: clamp(30px, 5vw, 36px);
+    letter-spacing: -0.6px;
+  }
+  .auth-page--welcome .auth-intro > p:not(.auth-eyebrow) {
+    margin-bottom: 20px;
+    font-size: 13px;
+  }
+  .auth-page--welcome .auth-editorial-note {
+    display: block;
+    padding-top: 14px;
+    font-size: 9px;
+    letter-spacing: 1.2px;
   }
 }
 @media (max-width: 640px) {

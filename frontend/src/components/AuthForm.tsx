@@ -109,18 +109,25 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
 
   if (status === 'authenticated') return <Navigate to={from} replace />
   return (
-    <section className="auth-page page-container" aria-labelledby="auth-title">
+    <section
+      className="auth-page page-container auth-page--welcome"
+      aria-labelledby="auth-title"
+    >
       <div className="auth-intro">
         <Link className="auth-back" to={from}>
           ← Trở về Cineverse
         </Link>
-        <p className="auth-eyebrow">CINEVERSE / KHÔNG GIAN CỦA BẠN</p>
+        <p className="auth-eyebrow">
+          {isRegister
+            ? 'CINEVERSE / BẮT ĐẦU HÀNH TRÌNH'
+            : 'CINEVERSE / KHÔNG GIAN CỦA BẠN'}
+        </p>
         <h1 id="auth-title">
           {isRegister ? (
             <>
-              Một khởi đầu.
+              Mỗi câu chuyện
               <br />
-              <em>{' Nhiều câu chuyện.'}</em>
+              <em>{' bắt đầu từ đây.'}</em>
             </>
           ) : (
             <>
@@ -132,7 +139,7 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
         </h1>
         <p>
           {isRegister
-            ? 'Tạo tài khoản và trở thành một phần của không gian dành cho người yêu điện ảnh.'
+            ? 'Tạo tài khoản Cineverse để lưu giữ những bộ phim và câu chuyện điện ảnh bạn yêu thích.'
             : 'Đăng nhập để tiếp tục hành trình điện ảnh cùng Cineverse.'}
         </p>
         <span className="auth-editorial-note">MỖI BỘ PHIM, MỘT THẾ GIỚI.</span>
@@ -322,13 +329,13 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
                 {isSubmitting
                   ? 'Đang xử lý…'
                   : isRegister
-                    ? 'Đăng ký'
+                    ? 'Tạo tài khoản'
                     : 'Đăng nhập'}
                 <span aria-hidden="true">↗</span>
               </button>
             </form>
             <p className="auth-switch">
-              {isRegister ? 'Bạn đã có tài khoản? ' : 'Chưa có tài khoản? '}
+              {isRegister ? 'Đã có tài khoản? ' : 'Chưa có tài khoản? '}
               <Link to={isRegister ? '/login' : '/register'} state={{ from }}>
                 {isRegister ? 'Đăng nhập' : 'Đăng ký'}
               </Link>

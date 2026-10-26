@@ -162,7 +162,9 @@ async function main() {
     await page.goto(base + '/register')
     await page.getByLabel('Xác nhận mật khẩu', { exact: true }).waitFor()
     assert.equal(await page.locator('.auth-card input').count(), 4)
-    await page.getByRole('button', { name: 'Đăng ký', exact: true }).click()
+    await page
+      .getByRole('button', { name: 'Tạo tài khoản', exact: true })
+      .click()
     assert.equal(
       await page.locator('#auth-name').getAttribute('aria-invalid'),
       'true',
@@ -175,7 +177,9 @@ async function main() {
     await page
       .getByLabel('Xác nhận mật khẩu', { exact: true })
       .fill('different')
-    await page.getByRole('button', { name: 'Đăng ký', exact: true }).click()
+    await page
+      .getByRole('button', { name: 'Tạo tài khoản', exact: true })
+      .click()
     await page.getByText('Mật khẩu xác nhận chưa khớp.').waitFor()
     assert.equal(posts.length, 0)
     await page
@@ -186,8 +190,26 @@ async function main() {
       'text',
     )
     await page.getByLabel('Xác nhận mật khẩu', { exact: true }).fill(password)
-    await page.getByRole('button', { name: 'Đăng ký', exact: true }).click()
+    let releaseRegister
+    const heldRegister = new Promise((resolve) => {
+      releaseRegister = resolve
+    })
+    await page.route('**/api/auth/register', async (route) => {
+      await heldRegister
+      await route.continue()
+    })
+    await page
+      .getByRole('button', { name: 'Tạo tài khoản', exact: true })
+      .click()
+    await page.getByRole('button', { name: 'Đang xử lý…' }).waitFor()
+    assert.equal(
+      await page.getByRole('button', { name: 'Đang xử lý…' }).isDisabled(),
+      true,
+    )
+    assert.equal(await page.locator('.auth-card input:disabled').count(), 4)
+    releaseRegister()
     await page.waitForURL('**/login')
+    await page.unroute('**/api/auth/register')
     await page
       .getByText('Tài khoản đã được tạo. Hãy đăng nhập để tiếp tục.')
       .waitFor()
@@ -351,7 +373,9 @@ async function main() {
     await page.getByLabel('Email', { exact: true }).fill('fixture@example.com')
     await page.getByLabel('Mật khẩu', { exact: true }).fill(password)
     await page.getByLabel('Xác nhận mật khẩu', { exact: true }).fill(password)
-    await page.getByRole('button', { name: 'Đăng ký', exact: true }).click()
+    await page
+      .getByRole('button', { name: 'Tạo tài khoản', exact: true })
+      .click()
     await page
       .locator('#auth-email-error')
       .filter({ hasText: 'đã được sử dụng' })
@@ -371,6 +395,26 @@ async function main() {
       path: '.npm-cache/phase-6.2c-register-mobile.png',
       fullPage: true,
     })
+    await page.route('**/api/auth/register', (route) =>
+      route.fulfill({
+        status: 503,
+        json: { error: { code: 'REGISTRATION_UNAVAILABLE' } },
+      }),
+    )
+    await page
+      .getByRole('button', { name: 'Tạo tài khoản', exact: true })
+      .click()
+    await page
+      .getByRole('alert')
+      .filter({ hasText: 'Dịch vụ tài khoản tạm thời không khả dụng' })
+      .waitFor()
+    assert.equal(
+      await page
+        .getByRole('button', { name: 'Tạo tài khoản', exact: true })
+        .isEnabled(),
+      true,
+    )
+    await page.unroute('**/api/auth/register')
     // Unknown session không trở thành guest; retry có giới hạn theo click.
     const fresh = await browser.newContext()
     const unknown = await fresh.newPage()

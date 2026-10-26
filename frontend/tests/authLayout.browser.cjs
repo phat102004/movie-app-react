@@ -84,7 +84,7 @@ async function main() {
         if (route === '/register')
           assert.ok(
             (await page.locator('.auth-intro h1').textContent()).includes(
-              '. Nhiều',
+              'Mỗi câu chuyện bắt đầu từ đây.',
             ),
           )
         if (route === '/login')
@@ -116,6 +116,14 @@ async function main() {
             cardBottom: card.bottom,
             cardTop: card.top,
             introWidth: intro.width,
+            introHeight: intro.height,
+            cardHeight: card.height,
+            introBackground: getComputedStyle(
+              document.querySelector('.auth-intro'),
+            ).backgroundColor,
+            introBorderWidth: getComputedStyle(
+              document.querySelector('.auth-intro'),
+            ).borderTopWidth,
             introTop: intro.top,
             centerDifference: Math.abs(
               (card.top + card.bottom) / 2 - (intro.top + intro.bottom) / 2,
@@ -158,16 +166,73 @@ async function main() {
           assert.ok(layout.cardWidth >= 400)
           const ratio =
             layout.introWidth / (layout.introWidth + layout.cardWidth)
-          assert.ok(ratio >= 0.52 && ratio <= 0.55)
+          assert.ok(
+            route === '/login' || route === '/register'
+              ? Math.abs(ratio - 0.55) < 0.005
+              : ratio >= 0.52 && ratio <= 0.55,
+          )
+          if (route === '/login' || route === '/register')
+            assert.ok(Math.abs(layout.introHeight - layout.cardHeight) < 2)
           assert.ok(
             layout.centerDifference < 2,
             `${route} ${width}: columns not centered`,
           )
         } else assert.equal(layout.columns, 1)
+        if (route === '/login' || route === '/register') {
+          assert.equal(layout.introBackground, 'rgb(76, 93, 70)')
+          assert.equal(layout.introBorderWidth, '1px')
+          if (width < 1024)
+            assert.ok(
+              layout.introHeight <= (route === '/register' ? 360 : 340),
+              `${width}: welcome banner too tall`,
+            )
+          const contrast = await page
+            .locator('.auth-intro')
+            .evaluate((panel) => {
+              const luminance = (color) => {
+                const rgb = color
+                  .match(/[\d.]+/g)
+                  .slice(0, 3)
+                  .map(Number)
+                  .map((value) => {
+                    const channel = value / 255
+                    return channel <= 0.04045
+                      ? channel / 12.92
+                      : ((channel + 0.055) / 1.055) ** 2.4
+                  })
+                return 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]
+              }
+              const background = luminance(
+                getComputedStyle(panel).backgroundColor,
+              )
+              return [
+                ...panel.querySelectorAll('a, p, h1, em, .auth-editorial-note'),
+              ].map((element) => {
+                const foreground = luminance(getComputedStyle(element).color)
+                return (
+                  (Math.max(foreground, background) + 0.05) /
+                  (Math.min(foreground, background) + 0.05)
+                )
+              })
+            })
+          assert.ok(
+            contrast.every((ratio) => ratio >= 4.5),
+            `${width}: welcome text contrast`,
+          )
+        } else {
+          assert.equal(layout.introBackground, 'rgba(0, 0, 0, 0)')
+          assert.equal(layout.introBorderWidth, '0px')
+        }
         if ([320, 1920].includes(width)) {
           // Inputs remain empty; screenshots never contain passwords or token metadata.
           await page.screenshot({
             path: `.npm-cache/phase-6.2e-${route.slice(1)}-${width}.png`,
+            fullPage: true,
+          })
+        }
+        if (route === '/login' || route === '/register') {
+          await page.screenshot({
+            path: `.npm-cache/phase-6.2f-${route.slice(1)}-${width}.png`,
             fullPage: true,
           })
         }
@@ -223,6 +288,13 @@ async function main() {
       .waitFor()
 
     await page.goto(base + '/login')
+    await page.getByRole('link', { name: '← Trở về Cineverse' }).focus()
+    assert.equal(
+      await page
+        .locator('.auth-back')
+        .evaluate((element) => getComputedStyle(element).outlineColor),
+      'rgb(246, 243, 237)',
+    )
     await page.getByRole('link', { name: 'Quên mật khẩu?' }).focus()
     assert.equal(
       await page
