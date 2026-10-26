@@ -12,6 +12,8 @@ import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { ResetPasswordPage } from './pages/ResetPasswordPage'
 import { clearResetToken } from './utils/resetToken'
 import { AuthSessionNotice } from './components/AuthSessionNotice'
+import { FavoritesNotice } from './components/FavoritesNotice'
+import { FavoritesPage } from './pages/FavoritesPage'
 import { defaultMovieFilters } from './data/movieFilters'
 import { useMovies } from './hooks/useMovies'
 import type { MovieFilterValues } from './types/movieFilters'
@@ -53,6 +55,7 @@ function App() {
         onSearchQueryChange={handleSearchChange}
       />
       <AuthSessionNotice />
+      <FavoritesNotice />
       <main
         id="main-content"
         className={isAuthPage ? 'auth-main' : undefined}
@@ -72,6 +75,7 @@ function App() {
             }
           />
           <Route path="/movies/:movieId" element={<MovieDetailsPage />} />
+          <Route path="/favorites" element={<FavoritesPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />

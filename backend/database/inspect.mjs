@@ -3,11 +3,38 @@ import { DatabaseConfigError } from './config.mjs'
 export const initialMigration = '20261026000000_init_user_model'
 export const sessionMigration = '20261026010000_add_session_model'
 export const passwordResetMigration = '20261026020000_add_password_reset_token'
+export const favoriteMigration = '20261026030000_add_favorite_model'
 export const knownMigrations = [
   initialMigration,
   sessionMigration,
   passwordResetMigration,
+  favoriteMigration,
 ]
+
+export function migrationSchemaPath(count) {
+  const paths = [
+    'backend/prisma/baselines/user.prisma',
+    'backend/prisma/baselines/session.prisma',
+    'backend/prisma/baselines/password-reset.prisma',
+    'backend/prisma/schema.prisma',
+  ]
+  if (!Number.isInteger(count) || !paths[count - 1])
+    throw new DatabaseConfigError(
+      'Không nhận diện được snapshot schema của migration.',
+    )
+  return paths[count - 1]
+}
+
+// Chỉ COUNT, không đọc các trường dữ liệu hoặc hash của tài khoản/phiên.
+export async function countExistingRecords(client, count) {
+  return {
+    User: count >= 1 ? await client.user.count() : 0,
+    Session: count >= 2 ? await client.session.count() : 0,
+    PasswordResetToken:
+      count >= 3 ? await client.passwordResetToken.count() : 0,
+    Favorite: count >= 4 ? await client.favorite.count() : 0,
+  }
+}
 
 // Chỉ chấp nhận một prefix liên tục của lịch sử đã review và đúng checksum.
 export function migrationState(snapshot, expected) {
@@ -37,7 +64,9 @@ export function migrationState(snapshot, expected) {
         ? ['User']
         : count === 2
           ? ['User', 'Session']
-          : ['User', 'Session', 'PasswordResetToken']
+          : count === 3
+            ? ['User', 'Session', 'PasswordResetToken']
+            : ['User', 'Session', 'PasswordResetToken', 'Favorite']
   const actual = snapshot.objects.filter(
     (item) =>
       !(

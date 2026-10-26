@@ -1,6 +1,7 @@
 import { getPrisma, disconnectDatabase } from '../database/client.mjs'
 import { databaseErrorMessage } from '../database/config.mjs'
 import { inspectDatabase } from '../database/inspect.mjs'
+import { assertFavoriteSchema } from '../database/favorite.mjs'
 
 // CLI riêng, không có HTTP endpoint để đọc database.
 const timeout = setTimeout(() => {
@@ -62,6 +63,23 @@ try {
       'Bảng PasswordResetToken tồn tại; Prisma truy vấn được, không đọc tokenHash.',
     )
   }
+  if (
+    snapshot.objects.some(
+      (item) =>
+        item.schema === 'public' &&
+        item.name === 'Favorite' &&
+        item.kind === 'r',
+    )
+  ) {
+    await assertFavoriteSchema(client)
+    const count = await client.favorite.count()
+    console.info(
+      `Favorite tồn tại: ${count} bản ghi. Cột, primary key, unique(userId,movieId), index(userId,createdAt), FK User/Cascade đều hợp lệ; Prisma nhận diện model.`,
+    )
+  } else
+    console.info(
+      'Chưa có Favorite; db:migrate chỉ áp dụng migration đã review khi guard đạt.',
+    )
 } catch (error) {
   console.error(databaseErrorMessage(error))
   process.exitCode = 1

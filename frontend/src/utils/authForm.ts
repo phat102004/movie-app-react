@@ -50,8 +50,9 @@ export function validateRegisterForm(
 export function authReturnPath(state: unknown): string {
   const path =
     state && typeof state === 'object' && 'from' in state ? state.from : null
-  // Chỉ cho phép hai route công khai có thật; chặn external URL và auth redirect loop.
+  // Allowlist route nội bộ có thật; chặn external URL và auth redirect loop.
   if (path === '/') return '/'
+  if (path === '/favorites') return '/favorites'
   return typeof path === 'string' &&
     /^\/movies\/[1-9]\d*$/.test(path) &&
     Number(path.slice(8)) <= 2_147_483_647

@@ -1,8 +1,14 @@
-# Cineverse — Phase 6.2E: Auth UI Refinement & Password Recovery
+# Cineverse — Phase 6.3C: React Favorites Integration
 
 React + TypeScript + Vite với giao diện Minimal Editorial Cinema. Dữ liệu phim được tải qua proxy Node.js cục bộ; token TMDB chỉ nằm trên server.
 
 Backend dùng Node.js, PostgreSQL và Prisma 7; mật khẩu hash Argon2id, phiên đăng nhập lưu phía server với cookie HTTP-only. Frontend dùng React Router, API service và custom hooks.
+
+Phase 6.3C kết nối **Favorites trên React**: nút tim dùng chung ở MovieCard/chi tiết, trang `/favorites`, state theo User và phục hồi từ API khi refresh. Đọc đủ cursor, khóa request trùng theo movieId, bỏ qua response lỗi thời và tải metadata qua proxy tối đa 4 request đồng thời. UI giữ ivory/cream/olive; chưa hỗ trợ TV Favorites. [Kiến trúc, file thay đổi, tests, screenshot local và hướng dẫn học](docs/phase-6.3c-favorites-frontend.md).
+
+Phase 6.3B thêm **GET/POST /api/favorites** và **DELETE /api/favorites/:movieId** cho session đã xác thực. Mọi truy vấn lọc theo User phía server; POST idempotent 201/200, DELETE 204, GET tối đa 100 bản ghi/trang với nextCursor. POST/DELETE cần CSRF, Origin hợp lệ; API validate movieId nguyên dương Int32 và không gọi TMDB. Chưa tích hợp UI. Đọc [API contract, phân quyền, lỗi, tests và hướng dẫn PowerShell](docs/phase-6.3b-favorites-api.md).
+
+Phase 6.3A thêm model **Favorite** theo User: UUID, userId, TMDB movieId Int32, createdAt Timestamptz(3), unique(userId,movieId), index(userId,createdAt) và FK Cascade. Migration **đã áp dụng**; User/Session/PasswordResetToken giữ nguyên số bản ghi, Favorite đang rỗng, chạy lại migration không ghi DB. Chỉ làm nền tảng database/migration/Prisma/kiểm thử; **chưa có Favorites API hoặc UI**. Tests SQL dùng PostgreSQL WASM RAM riêng, không thêm/xóa Favorite trong database thật. Đọc [thiết kế model, migration safety, pgAdmin và hướng dẫn học](docs/phase-6.3a-favorites-database.md).
 
 Phase 6.2E cân bằng bốn trang Auth: container 1100px, hai cột khoảng 53/47, form tối đa 440px, thu gọn intro trên mobile và footer nằm cuối viewport tự nhiên. Forgot phân biệt validation/rate limit/email chưa sẵn sàng/lỗi hệ thống/network, không báo đã gửi khi delivery lỗi. Không thay backend auth/migration/password policy hoặc `.env`. **Mailpit chưa được phát hiện trên máy; chưa kiểm chứng gửi/nhận qua Mailpit thật.** Xem [audit, file thay đổi, hướng dẫn Windows và checklist Forgot → Reset](docs/phase-6.2e-auth-refinement.md).
 
@@ -82,16 +88,16 @@ npm.cmd run db:migrate
 npm.cmd run db:check
 ```
 
-Database hiện đã áp dụng `init_user_model`, `add_session_model` và `add_password_reset_token`. Các cột User/Session giữ nguyên; PasswordResetToken là bảng mới có foreign key tới User. `db:migrate` kiểm tra database, inventory, thứ tự/checksum lịch sử và schema drift trước khi áp dụng ba migration đã review bằng `migrate deploy`. Chạy lại khi đã đủ migration chỉ kiểm tra và không ghi database. Không reset, không seed và không tác động database khác. Migration tiếp theo cần mở rộng guard có kiểm thử.
+Database có bốn migration đã review: `init_user_model`, `add_session_model`, `add_password_reset_token`, `add_favorite_model`. Favorite chỉ thêm bảng/index/FK; các cột auth giữ nguyên. `db:migrate` kiểm tra database, inventory, thứ tự/checksum lịch sử và schema drift trước khi dùng `migrate deploy`, rồi kiểm tra catalog và số bản ghi. Chạy lại khi đã đủ migration chỉ kiểm tra và không ghi database. Không reset, không seed và không tác động database khác. Migration tiếp theo cần mở rộng guard có kiểm thử.
 
-Ở bước này dùng SQL sinh offline rồi apply để không tạo/xóa shadow database của `migrate dev`. Snapshot User trong `backend/prisma/baselines/user.prisma` dùng trước Session; snapshot `session.prisma` dùng trước PasswordResetToken. Xem [migration và email recovery](docs/phase-6.2d-password-recovery.md).
+Ở bước này dùng SQL sinh offline rồi apply để không tạo/xóa shadow database của `migrate dev`. Snapshot `user.prisma`, `session.prisma`, `password-reset.prisma` dùng kiểm tra drift ở từng trạng thái trước migration kế tiếp. Xem [Favorites database foundation](docs/phase-6.3a-favorites-database.md).
 
 | Lệnh tại root                     | Nhiệm vụ                                                                      |
 | --------------------------------- | ----------------------------------------------------------------------------- |
 | `npm.cmd run db:validate`         | Kiểm tra schema, không cần database                                           |
 | `npm.cmd run db:generate`         | Sinh client vào backend/generated/prisma; không tạo bảng                      |
-| `npm.cmd run db:migrate:create`   | In SQL từ baseline User+Session tới schema hiện tại, không thực thi SQL       |
-| `npm.cmd run db:migrate`          | Kiểm tra an toàn/drift và áp dụng ba migration đã review                      |
+| `npm.cmd run db:migrate:create`   | In SQL từ baseline User+Session+ResetToken tới schema hiện tại, không apply   |
+| `npm.cmd run db:migrate`          | Kiểm tra an toàn/drift và áp dụng bốn migration đã review                     |
 | `npm.cmd run db:check`            | Kết nối chỉ đọc, kiểm tra metadata/model, không in người dùng hay credentials |
 | `npm.cmd run db:studio`           | Mở Studio local; mở URL terminal thông báo, Ctrl+C để dừng                    |
 | `npm.cmd run db:sessions:cleanup` | Xóa tối đa 1000 session đã hết hạn/lần, không xóa User hoặc session còn hạn   |
@@ -130,6 +136,14 @@ Hiện tại, lệnh `dev` ở cả thư mục gốc lẫn `frontend` đều ch�
 Nếu chưa có token, UI sẽ báo chưa cấu hình kết nối. Không tự chuyển sang phim mẫu. Dữ liệu/ảnh mẫu cũ vẫn lưu để tham khảo, không còn là nguồn runtime.
 
 ## Endpoints và luồng dữ liệu
+
+```text
+GET    /api/favorites          → session User → Prisma where userId + sort/pagination → 200
+POST   /api/favorites          → CSRF + session + movieId number → create/unique → 201/200
+DELETE /api/favorites/:movieId → CSRF + session → deleteMany where userId AND movieId → 204
+```
+
+GET trả `{ favorites: [{ movieId, createdAt }], nextCursor }`. Lặp cursor tới null để đọc đủ danh sách. Không nhận userId từ client, không trả internal Favorite UUID hoặc metadata phim. Favorites mutation cần `X-Cineverse-CSRF: 1` và Origin đúng allowlist; DELETE không body. Chi tiết errors/rate limits và kiểm thử nằm trong tài liệu Phase 6.3B.
 
 ```text
 POST /api/auth/login  → verify Argon2id → tạo Session → Set-Cookie HTTP-only
@@ -207,6 +221,9 @@ Có thể chạy riêng bằng npm.cmd run dev:proxy và npm.cmd run dev:fronten
 
 Đọc tiếp:
 
+- [Phase 6.3C — React Favorites, Context, phân trang và metadata](docs/phase-6.3c-favorites-frontend.md).
+- [Phase 6.3B — Favorites API, session/ownership, pagination và PowerShell](docs/phase-6.3b-favorites-api.md).
+- [Phase 6.3A — Favorite model, migration/guards, kiểm thử RAM và pgAdmin](docs/phase-6.3a-favorites-database.md).
 - [Phase 6.2E — Auth layout, chẩn đoán lỗi Forgot, Mailpit Windows và checklist kiểm thử](docs/phase-6.2e-auth-refinement.md).
 - [Phase 6.2D — Forgot/Reset, SMTP/Mailpit, migration, bảo mật token và kiểm thử](docs/phase-6.2d-password-recovery.md).
 - [Phase 6.2C — AuthProvider/useAuth, forms, API service, kiểm thử và hướng dẫn browser](docs/phase-6.2c-auth-ui.md).
@@ -233,4 +250,10 @@ Có thể chạy riêng bằng npm.cmd run dev:proxy và npm.cmd run dev:fronten
 
 **Xác minh Phase 6.2E:** 134 tests đạt (84 backend, 50 frontend), lint/typecheck/build đạt. Edge kiểm tra bốn trang Auth ở 320/375/768/1024/1440/1920px, keyboard/focus/validation/footer/overflow và lỗi SMTP disabled/refused; hồi quy Auth/recovery/Home/Details/Search/compact/cast đạt. Mailpit thật và SMTP Internet chưa xác minh; không sửa `.env`, migration hay tài khoản thật. Xem tài liệu Phase 6.2E để tự thiết lập và chạy checklist.
 
-Dừng tại Phase 6.2E. Auth UI đã tinh chỉnh; email delivery vẫn cần người dùng cấu hình để nhận link thật. Source thực tế chưa có danh sách Favorites: nút Yêu thích vẫn chưa kích hoạt. Chưa thêm JWT/OAuth/MFA hoặc phát phim đầy đủ. Khi đưa SPA lên hosting cần fallback các URL giao diện về index.html, đặt no-store cho trang recovery và Referrer-Policy: no-referrer; xem tài liệu Phase 6.2D/6.2E.
+**Xác minh Phase 6.3A:** 146 tests đạt (96 backend, 50 frontend), lint/typecheck/build và validate/generate/migrate/db:check đạt. Favorite đã được tạo trên cineverse_dev/PostgreSQL 17.11; unique/FK/index/cột đúng catalog. User 2→2, Session 1→1, ResetToken 0→0, Favorite 0; migration chạy lại giữ nguyên history/counts và chỉ có một bản ghi add_favorite_model. Kiểm thử CRUD/unique/Cascade trong PostgreSQL WASM RAM, không thêm/xóa Favorite thật. Chưa chặn movieId 0/âm ở DB; validation số nguyên dương Int32 thuộc Phase 6.3B.
+
+**Xác minh Phase 6.3B:** 184 tests đạt (134 backend, 50 frontend, gồm 38 Favorites tests mới), lint/typecheck/build và browser regression đạt. Prisma diff chỉ đọc không có schema drift; counts/history trước và sau giữ nguyên (User 2, Session 2, ResetToken 0, Favorite 0; 4 migrations). CRUD Favorites được kiểm thử với database mock; không thêm/xóa Favorite thật. Xem chi tiết và hướng dẫn PowerShell trong tài liệu Phase 6.3B.
+
+**Xác minh Phase 6.3C:** 205 tests đạt (134 backend + 71 frontend, gồm 21 tests mới), Favorites browser 12 nhóm đạt; auth/movie/layout regression và lint/typecheck/build đạt. UI Favorites kiểm tra tại 375/768/1024/1440px. Tests dùng DB/TMDB fixtures, không ghi PostgreSQL thật. Không sửa backend/schema/migration/dependencies trong phase này.
+
+Dừng tại Phase 6.3C. Có bảng, API và UI Favorite theo User; nút Yêu thích mở `/favorites`. Auth UI giữ nguyên; email delivery cần người dùng cấu hình để nhận link thật. Chưa thêm TV Favorites, JWT/OAuth/MFA hoặc phát phim đầy đủ. Khi đưa SPA lên hosting cần fallback các URL giao diện về index.html (bao gồm `/favorites`), đặt no-store cho trang recovery và Referrer-Policy: no-referrer; xem tài liệu Phase 6.2D/6.2E.

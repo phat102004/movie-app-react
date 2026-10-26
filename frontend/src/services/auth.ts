@@ -4,6 +4,7 @@ import type {
   LoginInput,
   RegisterInput,
 } from '../types/auth.ts'
+import { sessionRequestInit } from './sessionHttp.ts'
 
 export class AuthApiError extends Error {
   status: number | null
@@ -141,26 +142,12 @@ async function request(
     | undefined,
   signal?: AbortSignal,
 ): Promise<unknown> {
-  const requestSignal = signal
-    ? AbortSignal.any([signal, AbortSignal.timeout(12_000)])
-    : AbortSignal.timeout(12_000)
   let response: Response
   try {
-    response = await fetch(`/api/auth/${path}`, {
-      method: body === undefined ? 'GET' : 'POST',
-      credentials: 'same-origin',
-      headers:
-        body === undefined
-          ? { Accept: 'application/json' }
-          : {
-              Accept: 'application/json',
-              'Content-Type': 'application/json',
-              'X-Cineverse-CSRF': '1',
-            },
-      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
-      signal: requestSignal,
-      cache: 'no-store',
-    })
+    response = await fetch(
+      `/api/auth/${path}`,
+      sessionRequestInit(body === undefined ? 'GET' : 'POST', signal, body),
+    )
   } catch (error) {
     if (signal?.aborted) throw error
     throw new AuthApiError(

@@ -1,4 +1,5 @@
 .movie-card {
+  position: relative;
   min-width: 0;
 }
 .movie-card-link {

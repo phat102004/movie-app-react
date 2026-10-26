@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import type { Movie } from '../types/movie'
 import { Icon } from './Icon'
+import { FavoriteButton } from './FavoriteButton'
 import './MovieCard.css'
 
 type MovieCardProps = {
@@ -58,6 +59,7 @@ export function MovieCard({ movie }: MovieCardProps) {
           </span>
         </div>
       </Link>
+      <FavoriteButton movieId={Number(movie.id)} title={movie.title} compact />
     </article>
   )
 }

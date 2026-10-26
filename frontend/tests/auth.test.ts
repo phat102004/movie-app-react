@@ -80,6 +80,7 @@ test('Register/Login validation bao gồm confirm, Unicode length và giữ kho�
 })
 
 test('Return path chỉ cho route nội bộ có thật, chặn open redirect/auth loop', () => {
+  assert.equal(authReturnPath({ from: '/favorites' }), '/favorites')
   assert.equal(authReturnPath({ from: '/movies/27205' }), '/movies/27205')
   for (const from of [
     '//evil.example',

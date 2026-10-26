@@ -45,6 +45,7 @@ async function main() {
     import('../../backend/tests/helpers/auth-fixture.mjs'),
   ])
   const database = memoryDatabase([])
+  database.favorite = { findMany: async () => [] }
   database.user.create = async ({ data }) => {
     if (database.users.some((user) => user.email === data.email))
       throw Object.assign(new Error('unique fixture'), { code: 'P2002' })

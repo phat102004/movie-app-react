@@ -1,0 +1,201 @@
+.favorite-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  color: var(--accent-strong);
+  background: var(--background);
+  font-size: 13px;
+  line-height: 1.4;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease;
+}
+.favorite-button.is-favorite {
+  background: var(--accent-strong);
+  color: #f6f3ed;
+  border-color: var(--accent-strong);
+}
+.favorite-button.is-favorite .icon {
+  fill: currentColor;
+}
+.favorite-button:disabled {
+  color: var(--muted);
+  background: #eeece5;
+  border-color: var(--border);
+}
+.favorite-button[aria-busy='true'] .icon {
+  opacity: 0.55;
+}
+.favorite-button--compact {
+  position: absolute;
+  z-index: 1;
+  top: 8px;
+  right: 8px;
+  width: 44px;
+  padding: 10px;
+  background: #f7f5f0;
+}
+.favorite-button .icon {
+  width: 20px;
+  height: 20px;
+}
+.details-copy > .favorite-button {
+  margin-top: 20px;
+}
+.favorites-page {
+  padding-block: clamp(28px, 4vw, 56px) 56px;
+}
+.favorites-heading {
+  padding-bottom: 28px;
+  border-bottom: 1px solid var(--border-strong);
+  margin-bottom: 28px;
+}
+.favorites-chapter {
+  color: var(--accent-strong);
+  font-size: 10px;
+  letter-spacing: 1.8px;
+}
+.favorites-heading h1 {
+  max-width: 840px;
+  margin: 16px 0;
+  font-family: var(--font-editorial);
+  font-size: clamp(32px, 4.5vw, 58px);
+  font-weight: 400;
+  line-height: 1.15;
+}
+.favorites-heading h1 em {
+  color: var(--accent-strong);
+}
+.favorites-heading > p:last-child,
+.favorites-message > p,
+.favorites-summary {
+  color: var(--muted);
+  font-size: 14px;
+}
+.favorites-message {
+  max-width: 720px;
+  margin: 40px auto;
+  padding: clamp(24px, 4vw, 48px);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  text-align: center;
+}
+.favorites-message h2 {
+  font-family: var(--font-editorial);
+  font-size: clamp(25px, 3vw, 36px);
+  font-weight: 400;
+  line-height: 1.25;
+}
+.favorites-message .button {
+  margin-top: 16px;
+}
+.favorites-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 28px 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.favorites-grid > li {
+  min-width: 0;
+}
+.favorites-skeleton {
+  aspect-ratio: 2 / 3;
+  width: 100%;
+}
+.favorites-summary,
+.favorites-partial-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.favorites-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-block: 14px;
+  background: var(--accent-soft);
+  font-size: 13px;
+  border-bottom: 1px solid var(--border);
+}
+.favorites-notice button,
+.favorites-partial-error button,
+.favorites-text-button {
+  color: var(--accent-strong);
+  background: transparent;
+  border: 0;
+  min-height: 44px;
+  padding: 8px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.favorites-partial-error {
+  padding: 12px 16px;
+  background: var(--accent-soft);
+  font-size: 13px;
+}
+.favorites-unavailable {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 18px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.favorites-unavailable h2 {
+  font-family: var(--font-editorial);
+  font-weight: 400;
+  font-size: 22px;
+}
+.favorites-unavailable .favorite-button {
+  margin-top: 20px;
+}
+.favorites-more {
+  display: flex;
+  justify-content: center;
+  margin-top: 32px;
+}
+@media (hover: hover) {
+  .favorite-button:not(:disabled):hover {
+    border-color: var(--accent-strong);
+    background: var(--accent-soft);
+    color: var(--accent-strong);
+  }
+}
+@media (max-width: 1199px) {
+  .favorites-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@media (max-width: 899px) {
+  .favorites-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 599px) {
+  .favorites-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px 14px;
+  }
+  .favorites-message {
+    margin-block: 24px;
+  }
+  .favorite-button--compact {
+    top: 6px;
+    right: 6px;
+  }
+}

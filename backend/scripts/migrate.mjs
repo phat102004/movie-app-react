@@ -12,16 +12,19 @@ import {
   knownMigrations,
   migrationState,
   inspectDatabase,
+  migrationSchemaPath,
+  countExistingRecords,
 } from '../database/inspect.mjs'
+import { assertFavoriteSchema } from '../database/favorite.mjs'
 
 const run = promisify(execFile)
 const root = fileURLToPath(new URL('../../', import.meta.url))
 const timeout = setTimeout(() => {
   console.error(
-    'Migration quá 60 giây; đã dừng. Kiểm tra lịch sử migration trong pgAdmin trước khi chạy lại.',
+    'Migration quá 180 giây; đã dừng. Kiểm tra lịch sử migration trong pgAdmin trước khi chạy lại.',
   )
   process.exit(1)
-}, 60_000)
+}, 180_000)
 
 try {
   // Chỉ áp dụng các migration trong allowlist đã review; không nhận SQL tùy ý.
@@ -53,12 +56,7 @@ try {
   const applied = migrationState(before, expected)
   async function assertNoDrift(count) {
     if (!count) return
-    const schema =
-      count === 1
-        ? 'backend/prisma/baselines/user.prisma'
-        : count === 2
-          ? 'backend/prisma/baselines/session.prisma'
-          : 'backend/prisma/schema.prisma'
+    const schema = migrationSchemaPath(count)
     try {
       await run(
         process.execPath,
@@ -73,7 +71,7 @@ try {
           schema,
           '--exit-code',
         ],
-        { cwd: root, windowsHide: true, timeout: 15_000, maxBuffer: 512_000 },
+        { cwd: root, windowsHide: true, timeout: 45_000, maxBuffer: 512_000 },
       )
     } catch {
       throw new DatabaseConfigError(
@@ -83,12 +81,13 @@ try {
   }
   await assertNoDrift(applied)
   if (applied === expected.length) {
+    await assertFavoriteSchema(client)
     console.info(
       'Các migration đã được áp dụng và schema khớp; không thay đổi database.',
     )
   } else {
-    const usersBefore = applied ? await client.user.count() : 0
-    const sessionsBefore = applied >= 2 ? await client.session.count() : 0
+    const countsBefore = await countExistingRecords(client, applied)
+    console.info(`Số bản ghi trước migration: ${JSON.stringify(countsBefore)}`)
     console.info(
       'Database, checksum và schema đã được xác minh. Áp dụng migration đã review…',
     )
@@ -104,7 +103,7 @@ try {
           '--config',
           'backend/prisma.config.mjs',
         ],
-        { cwd: root, windowsHide: true, timeout: 30_000, maxBuffer: 512_000 },
+        { cwd: root, windowsHide: true, timeout: 45_000, maxBuffer: 512_000 },
       )
     } catch {
       throw new DatabaseConfigError(
@@ -117,10 +116,19 @@ try {
         'Chưa xác nhận được các bảng và lịch sử migration sau khi áp dụng.',
       )
     await assertNoDrift(expected.length)
-    const usersAfter = await client.user.count()
-    const sessionsAfter = await client.session.count()
+    await assertFavoriteSchema(client)
+    const countsAfter = await countExistingRecords(client, expected.length)
+    console.info(`Số bản ghi sau migration: ${JSON.stringify(countsAfter)}`)
+    if (
+      Object.keys(countsBefore).some(
+        (model) => countsBefore[model] !== countsAfter[model],
+      )
+    )
+      throw new DatabaseConfigError(
+        'Số bản ghi thay đổi trong lúc migration; cần kiểm tra hoạt động đồng thời. Không tự sửa/xóa dữ liệu hoặc rollback.',
+      )
     console.info(
-      `Migration hoàn thành; schema khớp. Số User không đổi: ${usersBefore === usersAfter}; số Session không đổi: ${sessionsBefore === sessionsAfter}.`,
+      'Migration hoàn thành; schema khớp. User/Session/PasswordResetToken/Favorite được giữ nguyên số bản ghi.',
     )
   }
 } catch (error) {

@@ -5,6 +5,7 @@ import { MovieDataState } from '../components/MovieDataState'
 import { MovieList } from '../components/MovieList'
 import { MovieTrailer } from '../components/MovieTrailer'
 import { MovieCast } from '../components/MovieCast'
+import { FavoriteButton } from '../components/FavoriteButton'
 import { useMovieDetails } from '../hooks/useMovieDetails'
 import { isValidMovieId } from '../utils/movieId'
 import { NotFoundPage } from './NotFoundPage'
@@ -152,6 +153,11 @@ export function MovieDetailsPage() {
           ) : (
             <p className="details-note">Chưa có thông tin thể loại.</p>
           )}
+          <FavoriteButton
+            key={movie.id}
+            movieId={Number(movie.id)}
+            title={movie.title}
+          />
         </div>
         <div className="details-facts">
           <dl className="details-metadata">

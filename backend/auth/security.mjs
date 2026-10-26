@@ -16,7 +16,7 @@ export function assertAuthRequest(request, config) {
     )
   }
   if (
-    request.method === 'POST' &&
+    ['POST', 'DELETE'].includes(request.method) &&
     (request.headers['x-cineverse-csrf'] !== '1' ||
       (origin === undefined && fetchSite && fetchSite !== 'none'))
   )

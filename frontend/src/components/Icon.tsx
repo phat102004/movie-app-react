@@ -1,4 +1,5 @@
-type IconName = 'search' | 'menu' | 'close' | 'play' | 'info' | 'star' | 'arrow'
+type IconName =
+  'search' | 'menu' | 'close' | 'play' | 'info' | 'star' | 'arrow' | 'heart'
 
 type IconProps = {
   name: IconName
@@ -6,6 +7,8 @@ type IconProps = {
 }
 
 const paths: Record<IconName, string> = {
+  heart:
+    'M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z',
   search: 'M21 21l-4.35-4.35M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z',
   menu: 'M4 6h16M4 12h16M4 18h16',
   close: 'm6 6 12 12M6 18 18 6',

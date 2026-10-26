@@ -5,6 +5,8 @@ import {
   initialMigration,
   sessionMigration,
   passwordResetMigration,
+  favoriteMigration,
+  migrationSchemaPath,
   migrationState,
 } from '../database/inspect.mjs'
 import { DatabaseConfigError } from '../database/config.mjs'
@@ -13,6 +15,7 @@ const expected = [
   { name: initialMigration, checksum: 'a' },
   { name: sessionMigration, checksum: 'b' },
   { name: passwordResetMigration, checksum: 'c' },
+  { name: favoriteMigration, checksum: 'd' },
 ]
 const history = expected.map((migration) => ({
   ...migration,
@@ -29,12 +32,13 @@ const snapshot = (count) => ({
         object('_prisma_migrations'),
         ...(count >= 2 ? [object('Session')] : []),
         ...(count >= 3 ? [object('PasswordResetToken')] : []),
+        ...(count >= 4 ? [object('Favorite')] : []),
       ]
     : [],
 })
 
-test('migration plan chỉ chấp nhận empty/User/User+Session và prefix history đúng checksum', () => {
-  for (const count of [0, 1, 2, 3])
+test('migration plan chấp nhận đúng prefix từ database rỗng tới Favorite và đúng checksum', () => {
+  for (const count of [0, 1, 2, 3, 4])
     assert.equal(migrationState(snapshot(count), expected), count)
 })
 
@@ -58,8 +62,54 @@ test('migration plan chặn database khác, history lạ/đổi thứ tự/check
     },
     { ...snapshot(1), objects: [...snapshot(1).objects, object('Session')] },
     { ...snapshot(2), objects: snapshot(1).objects },
+    { ...snapshot(3), objects: [...snapshot(3).objects, object('Favorite')] },
+    { ...snapshot(4), objects: snapshot(3).objects },
+    {
+      ...snapshot(4),
+      migrations: [
+        ...history.slice(0, 3),
+        { ...history[3], checksum: 'changed' },
+      ],
+    },
   ])
     assert.throws(() => migrationState(input, expected), DatabaseConfigError)
+})
+
+test('drift check dùng đúng snapshot trước Favorite; không so schema mới với database cũ', () => {
+  assert.equal(migrationSchemaPath(1), 'backend/prisma/baselines/user.prisma')
+  assert.equal(
+    migrationSchemaPath(2),
+    'backend/prisma/baselines/session.prisma',
+  )
+  assert.equal(
+    migrationSchemaPath(3),
+    'backend/prisma/baselines/password-reset.prisma',
+  )
+  assert.equal(migrationSchemaPath(4), 'backend/prisma/schema.prisma')
+  for (const count of [0, 5, -1, 2.5])
+    assert.throws(() => migrationSchemaPath(count), DatabaseConfigError)
+})
+
+test('Favorite SQL chỉ thêm bảng/index/FK, không sửa bảng hoặc dữ liệu auth', () => {
+  const sql = readFileSync(
+    new URL(
+      `../prisma/migrations/${favoriteMigration}/migration.sql`,
+      import.meta.url,
+    ),
+    'utf8',
+  )
+  assert.match(sql, /CREATE TABLE "Favorite"/)
+  assert.match(sql, /"movieId" INTEGER NOT NULL/)
+  assert.match(
+    sql,
+    /"createdAt" TIMESTAMPTZ\(3\) NOT NULL DEFAULT CURRENT_TIMESTAMP/,
+  )
+  assert.match(sql, /REFERENCES "User"\("id"\) ON DELETE CASCADE/)
+  assert.doesNotMatch(
+    sql,
+    /\b(DROP|TRUNCATE|INSERT|DELETE FROM|UPDATE|ALTER TABLE "User"|ALTER TABLE "Session"|ALTER TABLE "PasswordResetToken")\b(?! CASCADE)/i,
+  )
+  assert.match(sql, /BEGIN;[\s\S]*COMMIT;/)
 })
 
 test('Session SQL chỉ tạo bảng/index/FK mới, không sửa dữ liệu hoặc migration ban đầu', () => {

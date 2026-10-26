@@ -10,12 +10,15 @@ import { createSessionHandlers } from './auth/session-routes.mjs'
 import { createResetEmailDelivery } from './auth/reset-email.mjs'
 import { createPasswordResetService } from './auth/password-reset-service.mjs'
 import { createPasswordResetHandlers } from './auth/password-reset-routes.mjs'
+import { createFavoriteService } from './favorites/favorite-service.mjs'
+import { createFavoriteHandler } from './favorites/favorite-routes.mjs'
 
 export function createAppServer({
   tmdb = {},
   registration = {},
   auth = {},
   passwordReset = {},
+  favorites = {},
 } = {}) {
   const config = auth.config ?? readAuthConfig()
   const sessions =
@@ -37,6 +40,16 @@ export function createAppServer({
   })
   const handleProxy = createProxyHandler(tmdb)
   const handleRegister = createRegisterHandler(registration)
+  const handleFavorites = createFavoriteHandler({
+    ...favorites,
+    config,
+    sessions,
+    service:
+      favorites.service ??
+      createFavoriteService({
+        getClient: favorites.getClient ?? auth.getClient,
+      }),
+  })
   const resetHandlers = createPasswordResetHandlers({
     ...passwordReset,
     service:
@@ -66,6 +79,13 @@ export function createAppServer({
           url = new URL(request.url ?? '/', 'http://localhost')
         } catch {
           throw new HttpError(400, 'BAD_REQUEST', 'Đường dẫn không hợp lệ.')
+        }
+        if (
+          url.pathname === '/api/favorites' ||
+          url.pathname.startsWith('/api/favorites/')
+        ) {
+          await handleFavorites(request, response, url)
+          return
         }
         const route = !url.search && routes.get(url.pathname)
         if (route) {

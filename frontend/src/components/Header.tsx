@@ -69,14 +69,15 @@ export function Header({ searchQuery, onSearchQueryChange }: HeaderProps) {
           >
             Phim bộ
           </button>
-          <button
-            className="nav-link"
-            type="button"
-            disabled
-            title="Trang Yêu thích sẽ được bổ sung sau"
+          <NavLink
+            to="/favorites"
+            className={({ isActive }) =>
+              `nav-link ${isActive ? 'is-active' : ''}`
+            }
+            onClick={closeMenu}
           >
             Yêu thích
-          </button>
+          </NavLink>
         </nav>
 
         <SearchBar query={searchQuery} onQueryChange={onSearchQueryChange} />
