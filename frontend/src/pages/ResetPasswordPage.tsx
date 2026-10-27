@@ -8,6 +8,7 @@ import type { AuthFieldErrors } from '../types/auth'
 import { captureResetToken, clearResetToken } from '../utils/resetToken'
 import { validateNewPasswordForm } from '../utils/authForm'
 import { useAuth } from '../hooks/useAuth'
+import { announceAuthChange } from '../services/authSync'
 
 export function ResetPasswordPage() {
   const [token, setToken] = useState(captureResetToken)
@@ -45,6 +46,7 @@ export function ResetPasswordPage() {
     setPending(true)
     try {
       await authService.resetPassword(token, values.password, request.signal)
+      announceAuthChange()
       // Server đã thu hồi session; cập nhật Provider, không tự đăng nhập.
       clearResetToken()
       if (!request.signal.aborted) {

@@ -531,7 +531,7 @@ async function main() {
     await harness
       .getByRole('button', { name: 'Retry profile', exact: true })
       .click()
-    await waitText('profile-state', 'SESSION_CHANGED')
+    await waitText('profile-state', 'PROFILE_OWNER_MISMATCH')
     assert.equal(await harness.locator('#profile-name').textContent(), '')
     assert.equal(mismatches, 1)
     await harness.unroute('**/api/profile')

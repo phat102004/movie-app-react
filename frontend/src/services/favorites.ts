@@ -70,9 +70,12 @@ async function request(
   method: 'GET' | 'POST' | 'DELETE',
   signal?: AbortSignal,
   body?: unknown,
+  expectedAccount?: string,
 ): Promise<unknown> {
   try {
-    const response = await fetch(path, sessionRequestInit(method, signal, body))
+    const response = await fetch(
+      path, sessionRequestInit(method, signal, body, expectedAccount),
+    )
     if (method === 'DELETE' && response.status === 204) return null
     const payload: unknown = await response.json().catch(() => null)
     if (signal?.aborted) throw signal.reason
@@ -126,7 +129,7 @@ function validateId(id: number) {
 }
 
 export const favoritesService: FavoritesApi = {
-  async listAll(signal) {
+  async listAll(signal, expectedAccount) {
     const rows = new Map<number, Favorite>()
     const seen = new Set<string>()
     let cursor: string | null = null
@@ -138,6 +141,8 @@ export const favoritesService: FavoritesApi = {
           `/api/favorites${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`,
           'GET',
           signal,
+          undefined,
+          expectedAccount,
         ),
       )
       for (const row of payload.favorites) rows.set(row.movieId, row)
@@ -152,17 +157,21 @@ export const favoritesService: FavoritesApi = {
       'PAGINATION_LIMIT',
     )
   },
-  async add(movieId, signal) {
+  async add(movieId, signal, expectedAccount) {
     validateId(movieId)
-    const payload = await request('/api/favorites', 'POST', signal, { movieId })
+    const payload = await request(
+      '/api/favorites', 'POST', signal, { movieId }, expectedAccount,
+    )
     if (!isRecord(payload)) throw invalid()
     const favorite = parseFavorite(payload.favorite)
     if (favorite.movieId !== movieId) throw invalid()
     return favorite
   },
-  async remove(movieId, signal) {
+  async remove(movieId, signal, expectedAccount) {
     validateId(movieId)
-    await request(`/api/favorites/${movieId}`, 'DELETE', signal)
+    await request(
+      `/api/favorites/${movieId}`, 'DELETE', signal, undefined, expectedAccount,
+    )
   },
 }
 

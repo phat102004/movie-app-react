@@ -27,14 +27,15 @@ export class PasswordChangeApiError extends Error {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value)
 export const passwordChangeService: PasswordChangeApi = {
-  async change(input, signal) {
+  async change(input, signal, expectedAccount) {
     try {
       const response = await fetch(
         '/api/profile/change-password',
-        sessionRequestInit('POST', signal, {
-          currentPassword: input.currentPassword,
-          newPassword: input.newPassword,
-        }),
+        sessionRequestInit(
+          'POST', signal,
+          { currentPassword: input.currentPassword, newPassword: input.newPassword },
+          expectedAccount,
+        ),
       )
       if (signal?.aborted) throw signal.reason
       if (response.status === 204) return

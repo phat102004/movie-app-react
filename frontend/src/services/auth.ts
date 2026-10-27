@@ -141,12 +141,13 @@ async function request(
     | Record<string, never>
     | undefined,
   signal?: AbortSignal,
+  expectedAccount?: string,
 ): Promise<unknown> {
   let response: Response
   try {
     response = await fetch(
       `/api/auth/${path}`,
-      sessionRequestInit(body === undefined ? 'GET' : 'POST', signal, body),
+      sessionRequestInit(body === undefined ? 'GET' : 'POST', signal, body, expectedAccount),
     )
   } catch (error) {
     if (signal?.aborted) throw error
@@ -208,8 +209,8 @@ export const authService = {
       throw error
     }
   },
-  async logout(signal?: AbortSignal): Promise<void> {
-    await request('logout', {}, signal)
+  async logout(signal?: AbortSignal, expectedAccount?: string): Promise<void> {
+    await request('logout', {}, signal, expectedAccount)
   },
 }
 

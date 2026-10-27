@@ -14,5 +14,5 @@ export type AuthFieldErrors = Partial<Record<AuthField, string>>
 export type AuthSessionApi = {
   me(signal?: AbortSignal): Promise<AuthUser | null>
   login(input: LoginInput, signal?: AbortSignal): Promise<AuthUser>
-  logout(signal?: AbortSignal): Promise<void>
+  logout(signal?: AbortSignal, expectedAccount?: string): Promise<void>
 }

@@ -11,6 +11,7 @@ import {
   memoryDatabase,
   authRequest,
   cookieFrom,
+  accountBindingHeaders,
 } from './helpers/auth-fixture.mjs'
 import { createFavoriteService } from '../favorites/favorite-service.mjs'
 import {
@@ -147,6 +148,7 @@ async function fixture(t, options = {}) {
           'Content-Type': 'application/json',
           'X-Cineverse-CSRF': '1',
           ...(cookie ? { Cookie: cookie } : {}),
+          ...accountBindingHeaders(cookie),
           ...headers,
         },
         ...(body !== undefined
@@ -487,6 +489,7 @@ test(
               'Content-Type': 'application/json',
               'X-Cineverse-CSRF': '1',
               Cookie: cookie,
+              ...accountBindingHeaders(cookie),
             },
           },
           (response) => {

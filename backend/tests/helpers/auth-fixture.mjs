@@ -202,6 +202,7 @@ export async function authRequest(
       'Content-Type': 'application/json',
       'X-Cineverse-CSRF': '1',
       ...(cookie ? { Cookie: cookie } : {}),
+      ...accountBindingHeaders(cookie),
       ...headers,
     },
     ...(method === 'POST'
@@ -214,5 +215,13 @@ export async function authRequest(
   }
 }
 
-export const cookieFrom = (result) =>
-  result.response.headers.get('set-cookie')?.split(';')[0]
+const fixtureAccounts = new Map()
+export function accountBindingHeaders(cookie) {
+  const owner = fixtureAccounts.get(cookie)
+  return owner ? { 'X-Cineverse-Account': owner } : {}
+}
+export function cookieFrom(result) {
+  const cookie = result.response.headers.get('set-cookie')?.split(';')[0]
+  if (cookie && result.body?.user?.id) fixtureAccounts.set(cookie, result.body.user.id)
+  return cookie
+}

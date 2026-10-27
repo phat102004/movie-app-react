@@ -8,8 +8,8 @@ import { profileService } from '../src/services/profile'
 import type { ProfileApi } from '../src/types/profile'
 
 const noSignalService: ProfileApi = {
-  get: () => profileService.get(),
-  update: (name) => profileService.update(name),
+  get: (_signal, owner) => profileService.get(undefined, owner),
+  update: (name, _signal, owner) => profileService.update(name, undefined, owner),
 }
 export function ProfileReader({ id }: { id: string }) {
   const profile = useProfile(id, noSignalService)

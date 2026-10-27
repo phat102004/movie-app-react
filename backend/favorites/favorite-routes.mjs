@@ -1,6 +1,7 @@
 import { HttpError, readJsonBody, sendJson } from '../http.mjs'
 import { readSessionToken } from '../auth/cookies.mjs'
 import { assertAuthRequest } from '../auth/security.mjs'
+import { assertAccountBinding } from '../auth/account-binding.mjs'
 import { createRegisterLimiter } from '../auth/rate-limit.mjs'
 import {
   parseFavoriteMovieId,
@@ -42,6 +43,7 @@ export function createFavoriteHandler({
     checkLimit(response, ipLimiter(request.socket.remoteAddress ?? 'unknown'))
     const token = readSessionToken(request.headers.cookie, config)
     const user = await sessions.currentUser(token)
+    assertAccountBinding(request, user)
     if (request.method !== 'GET') checkLimit(response, userLimiter(user.id))
     if (request.method !== 'GET' && url.search)
       throw new HttpError(

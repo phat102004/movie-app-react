@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useAuth } from '../hooks/useAuth'
+import { isSessionFailure } from '../services/sessionHttp'
 import { FavoritesContext } from './favorites-context'
 import type { Favorite, FavoritesApi } from '../types/favorites'
 import {
@@ -16,13 +17,17 @@ export function FavoritesProvider({
   children: ReactNode
   service?: FavoritesApi
 }) {
-  const { user, status: authStatus, isSigningOut, refreshUser } = useAuth()
+  const {
+    user, status: authStatus, isSigningOut,
+    sessionEpoch, isSessionCurrent, sessionChanged,
+  } = useAuth()
   const owner =
     authStatus === 'authenticated' && !isSigningOut ? user?.id : undefined
   const active = !!owner
   const authPending =
     authStatus === 'loading' || authStatus === 'error' || isSigningOut
   const [storedOwner, setStoredOwner] = useState(owner)
+  const [storedEpoch, setStoredEpoch] = useState(sessionEpoch)
   const [favorites, setFavorites] = useState<Favorite[]>([])
   const [status, setStatus] = useState<'guest' | 'loading' | 'ready' | 'error'>(
     active ? 'loading' : 'guest',
@@ -48,14 +53,18 @@ export function FavoritesProvider({
       await Promise.resolve()
       if (controller.signal.aborted) return
       setStoredOwner(owner)
+      setStoredEpoch(sessionEpoch)
       setFavorites([])
       setPendingIds(new Set())
       setError(null)
       setStatus(active ? 'loading' : 'guest')
       if (!active) return
       try {
-        const rows = await service.listAll(controller.signal)
-        if (alive.current && generation.current === current) {
+        const rows = await service.listAll(controller.signal, owner)
+        if (
+          alive.current && generation.current === current &&
+          isSessionCurrent(sessionEpoch)
+        ) {
           setFavorites(rows)
           setStatus('ready')
           ready.current = true
@@ -70,7 +79,7 @@ export function FavoritesProvider({
           setFavorites([])
           setError(failure)
           setStatus('error')
-          if (failure.status === 401) void refreshUser()
+          if (isSessionFailure(failure)) sessionChanged()
         }
       } finally {
         if (generation.current === current) loading.current = false
@@ -83,12 +92,13 @@ export function FavoritesProvider({
       for (const request of mutations.values()) request.abort()
       mutations.clear()
     }
-  }, [owner, active, service, revision, refreshUser])
+  }, [owner, active, service, revision, sessionEpoch, isSessionCurrent, sessionChanged])
 
   function reload() {
     if (
       !active ||
       storedOwner !== owner ||
+      storedEpoch !== sessionEpoch ||
       loading.current ||
       requests.current.size
     )
@@ -105,6 +115,8 @@ export function FavoritesProvider({
     if (
       !active ||
       storedOwner !== owner ||
+      storedEpoch !== sessionEpoch ||
+      !isSessionCurrent(sessionEpoch) ||
       !ready.current ||
       loading.current ||
       requests.current.has(movieId)
@@ -117,9 +129,12 @@ export function FavoritesProvider({
     setError(null)
     try {
       const row = add
-        ? await service.add(movieId, controller.signal)
-        : (await service.remove(movieId, controller.signal), null)
-      if (!alive.current || generation.current !== current) return
+        ? await service.add(movieId, controller.signal, owner)
+        : (await service.remove(movieId, controller.signal, owner), null)
+      if (
+        !alive.current || generation.current !== current ||
+        !isSessionCurrent(sessionEpoch)
+      ) return
       // Pessimistic update: chỉ đổi trái tim sau response thành công.
       setFavorites((previous) => {
         const next = previous.filter((favorite) => favorite.movieId !== movieId)
@@ -137,7 +152,7 @@ export function FavoritesProvider({
       ) {
         const failure = asFavoritesError(cause)
         setError(failure)
-        if (failure.status === 401) {
+        if (isSessionFailure(failure)) {
           // Một mutation mất phiên: không để các mutation khác tới muộn khôi phục state.
           ++generation.current
           for (const request of requests.current.values()) request.abort()
@@ -147,7 +162,7 @@ export function FavoritesProvider({
           ready.current = false
           setFavorites([])
           setStatus('error')
-          void refreshUser()
+          sessionChanged()
         }
       }
     } finally {
@@ -159,7 +174,7 @@ export function FavoritesProvider({
   }
 
   // Che state của owner cũ ngay trong render, không đợi Effect; không remount App/Router.
-  const matchingOwner = active && storedOwner === owner
+  const matchingOwner = active && storedOwner === owner && storedEpoch === sessionEpoch
   const visibleFavorites = matchingOwner ? favorites : []
   const favoriteIds = new Set(
     visibleFavorites.map((favorite) => favorite.movieId),

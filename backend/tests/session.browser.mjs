@@ -111,17 +111,19 @@ try {
   assert.equal(database.sessions.size, 1)
   assert.ok(statuses.includes(403) && statuses.includes(405))
   const logout = await page.evaluate(
-    async () =>
+    async (account) =>
       (
         await fetch('/api/auth/logout', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'X-Cineverse-CSRF': '1',
+            'X-Cineverse-Account': account,
           },
           body: '{}',
         })
       ).status,
+    user.id,
   )
   assert.equal(logout, 204)
   assert.equal(await me(), 401)

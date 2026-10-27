@@ -12,7 +12,7 @@ import {
 } from '../auth/password.mjs'
 import { validatePasswordChange } from '../profile/change-password-service.mjs'
 import { memoryAccountDatabase } from './helpers/account-database.mjs'
-import { authRequest, cookieFrom } from './helpers/auth-fixture.mjs'
+import { authRequest, cookieFrom, accountBindingHeaders } from './helpers/auth-fixture.mjs'
 
 const oldPassword = 'Old synthetic account password 123!'
 const newPassword = '  New synthetic account password 456!  '
@@ -95,6 +95,7 @@ async function fixture(t, passwordChange = {}, config = readAuthConfig({})) {
           'Content-Type': 'application/json',
           'X-Cineverse-CSRF': '1',
           ...(cookie ? { Cookie: cookie } : {}),
+          ...accountBindingHeaders(cookie),
           ...headers,
         },
         ...(method === 'POST'
@@ -385,6 +386,7 @@ test('Slow body + Logout → 401 trước hash', { timeout: 5000 }, async (t) =>
         method: 'POST',
         headers: {
           Cookie: cookie,
+          ...accountBindingHeaders(cookie),
           'Content-Type': 'application/json',
           'X-Cineverse-CSRF': '1',
         },

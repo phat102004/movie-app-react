@@ -9,5 +9,5 @@ export type PasswordChangeErrors = Partial<
   Record<keyof PasswordChangeValues, string>
 >
 export type PasswordChangeApi = {
-  change(input: PasswordChangeInput, signal?: AbortSignal): Promise<void>
+  change(input: PasswordChangeInput, signal?: AbortSignal, expectedAccount?: string): Promise<void>
 }

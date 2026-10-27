@@ -55,11 +55,12 @@ async function request(
   method: 'GET' | 'PATCH',
   signal?: AbortSignal,
   body?: { name: string },
+  expectedAccount?: string,
 ) {
   try {
     const response = await fetch(
       '/api/profile',
-      sessionRequestInit(method, signal, body),
+      sessionRequestInit(method, signal, body, expectedAccount),
     )
     const payload: unknown = await response.json().catch(() => null)
     if (signal?.aborted) throw signal.reason
@@ -106,12 +107,12 @@ async function request(
 }
 
 export const profileService: ProfileApi = {
-  get: (signal) => request('GET', signal),
-  async update(value, signal) {
+  get: (signal, expectedAccount) => request('GET', signal, undefined, expectedAccount),
+  async update(value, signal, expectedAccount) {
     const { name, error } = validateProfileName(value)
     if (error)
       throw new ProfileApiError(error, 400, 'VALIDATION_ERROR', { name: error })
-    const profile = await request('PATCH', signal, { name })
+    const profile = await request('PATCH', signal, { name }, expectedAccount)
     if (profile.name !== name) throw invalid()
     return profile
   },

@@ -14,6 +14,7 @@ import {
   memoryDatabase,
   authRequest,
   cookieFrom,
+  accountBindingHeaders,
 } from './helpers/auth-fixture.mjs'
 
 const password = 'Synthetic profile password 123!'
@@ -162,6 +163,7 @@ async function fixture(t, profile = {}) {
         'X-Cineverse-CSRF': '1',
         'Content-Type': 'application/json',
         ...(cookie ? { Cookie: cookie } : {}),
+        ...accountBindingHeaders(cookie),
         ...headers,
       },
       ...(body !== undefined
@@ -492,6 +494,7 @@ test(
             method: 'PATCH',
             headers: {
               Cookie: cookie,
+              ...accountBindingHeaders(cookie),
               'Content-Type': 'application/json',
               'X-Cineverse-CSRF': '1',
             },
@@ -610,7 +613,7 @@ test('Unsupported methods 405 + Allow; GET body 400', async (t) => {
   const status = await new Promise((resolve, reject) => {
     const request = httpRequest(
       f.base + '/api/profile',
-      { method: 'GET', headers: { Cookie: cookie, 'Content-Length': '2' } },
+      { method: 'GET', headers: { Cookie: cookie, ...accountBindingHeaders(cookie), 'Content-Length': '2' } },
       (response) => {
         response.resume()
         response.on('end', () => resolve(response.statusCode))
@@ -723,13 +726,14 @@ test('PATCH bảo toàn Session/ResetToken/Favorite; Favorites, Login, Me, Logou
     before,
   )
   const favorite = await fetch(f.base + '/api/favorites', {
-    headers: { Cookie: cookie },
+    headers: { Cookie: cookie, ...accountBindingHeaders(cookie) },
   })
   assert.equal((await favorite.json()).favorites.length, 1)
   const post = await fetch(f.base + '/api/favorites', {
     method: 'POST',
     headers: {
       Cookie: cookie,
+      ...accountBindingHeaders(cookie),
       'Content-Type': 'application/json',
       'X-Cineverse-CSRF': '1',
     },
@@ -742,7 +746,7 @@ test('PATCH bảo toàn Session/ResetToken/Favorite; Favorites, Login, Me, Logou
   })
   const del = await fetch(f.base + '/api/favorites/27205', {
     method: 'DELETE',
-    headers: { Cookie: cookie, 'X-Cineverse-CSRF': '1' },
+    headers: { Cookie: cookie, ...accountBindingHeaders(cookie), 'X-Cineverse-CSRF': '1' },
   })
   assert.equal(del.status, 204)
   assert.equal(f.tmdbCalls(), 0)

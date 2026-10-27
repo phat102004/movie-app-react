@@ -1,5 +1,5 @@
 // Dev-only harness; không được import vào bundle ứng dụng.
-import { StrictMode, useState } from 'react'
+import { StrictMode, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { AuthProvider } from '../src/contexts/AuthProvider'
 import { useAuth } from '../src/hooks/useAuth'
@@ -17,6 +17,10 @@ if (new URLSearchParams(location.search).has('ignoreAbort')) {
 export function Reader() {
   const auth = useAuth()
   const [actionError, setActionError] = useState('')
+  const captured = useRef<{
+    changePassword: typeof auth.changePassword
+    logout: typeof auth.logout
+  } | null>(null)
   return (
     <>
       <output id="auth-status">{auth.status}</output>
@@ -25,6 +29,19 @@ export function Reader() {
       <output id="action-error">{actionError}</output>
       <output id="changing-password">{String(auth.isChangingPassword)}</output>
       <output id="password-changed">{String(auth.passwordChanged)}</output>
+      <button onClick={() => {
+        captured.current = { changePassword: auth.changePassword, logout: auth.logout }
+        setActionError('')
+      }}>Capture account actions</button>
+      <button onClick={() => {
+        void captured.current?.changePassword({
+          currentPassword: 'Synthetic multitab account password!',
+          newPassword: 'Synthetic captured new password!',
+        }).catch(() => setActionError('captured-change-error'))
+      }}>Run captured change</button>
+      <button onClick={() => {
+        void captured.current?.logout().catch(() => setActionError('captured-logout-error'))
+      }}>Run captured logout</button>
       <button
         onClick={() => {
           void auth

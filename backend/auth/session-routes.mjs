@@ -2,6 +2,7 @@ import { readJsonBody, sendJson, HttpError } from '../http.mjs'
 import { readSessionToken, sessionCookie } from './cookies.mjs'
 import { createLoginLimiter } from './login-rate-limit.mjs'
 import { validateLogin } from './validation.mjs'
+import { assertAccountBinding } from './account-binding.mjs'
 
 function rateError(response, result) {
   if (result.allowed) return false
@@ -82,7 +83,17 @@ export function createSessionHandlers({
           'VALIDATION_ERROR',
           'Logout yêu cầu JSON object, ví dụ {}.',
         )
-      await sessions.revoke(readSessionToken(request.headers.cookie, config))
+      const token = readSessionToken(request.headers.cookie, config)
+      if (token) {
+        try {
+          assertAccountBinding(request, await sessions.currentUser(token))
+        } catch (error) {
+          // Revoking a missing/expired session remains idempotent. A valid session
+          // belonging to a different account MUST NOT be revoked or clear its cookie.
+          if (!(error instanceof HttpError && error.status === 401)) throw error
+        }
+      }
+      await sessions.revoke(token)
       response.writeHead(204, {
         'Set-Cookie': sessionCookie('', config, true),
         'Cache-Control': 'no-store',

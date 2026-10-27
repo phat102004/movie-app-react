@@ -1,6 +1,7 @@
 import { HttpError, readJsonBody } from '../http.mjs'
 import { readSessionToken, sessionCookie } from '../auth/cookies.mjs'
 import { assertAuthRequest } from '../auth/security.mjs'
+import { assertAccountBinding } from '../auth/account-binding.mjs'
 import { createRegisterLimiter } from '../auth/rate-limit.mjs'
 import { validatePasswordChange } from './change-password-service.mjs'
 
@@ -31,6 +32,7 @@ export function createChangePasswordHandler({
     limit(response, ipLimiter(request.socket.remoteAddress ?? 'unknown'))
     const token = readSessionToken(request.headers.cookie, config)
     const user = await sessions.currentUser(token)
+    assertAccountBinding(request, user)
     if (url.search)
       throw new HttpError(
         400,

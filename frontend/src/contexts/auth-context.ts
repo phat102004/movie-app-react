@@ -11,6 +11,11 @@ export type AuthContextValue = {
   isSigningOut: boolean
   isChangingPassword: boolean
   passwordChanged: boolean
+  sessionEpoch: number
+  sessionNotice: string | null
+  isSessionCurrent(epoch: number): boolean
+  sessionChanged(): void
+  dismissSessionNotice(): void
   acknowledgePasswordChange(): void
   changePassword(input: PasswordChangeInput): Promise<void>
   login(input: LoginInput): Promise<AuthUser>

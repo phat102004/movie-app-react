@@ -28,6 +28,7 @@ export function ProfilePage() {
     refreshUser,
     isRefreshing,
     passwordChanged,
+    sessionEpoch,
   } = useAuth()
   if (passwordChanged) return <ProfileLoading />
   if (status === 'guest')
@@ -51,7 +52,7 @@ export function ProfilePage() {
       </section>
     )
   // Key chỉ remount nội dung trang khi owner thay đổi; không remount App/Header/Router.
-  return <ProfileContent key={user.id} userId={user.id} />
+  return <ProfileContent key={`${user.id}:${sessionEpoch}`} userId={user.id} />
 }
 
 function ProfileContent({ userId }: { userId: string }) {
