@@ -392,6 +392,18 @@
   text-align: left;
   font-size: 13px;
 }
+.account-profile-link {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 10px 12px;
+  color: var(--accent-strong);
+  font-size: 13px;
+  text-decoration: none;
+}
+.account-profile-link:hover {
+  background: var(--accent-soft);
+}
 .account-logout:hover:not(:disabled) {
   background: var(--accent-soft);
 }

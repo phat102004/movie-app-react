@@ -14,6 +14,7 @@ import { clearResetToken } from './utils/resetToken'
 import { AuthSessionNotice } from './components/AuthSessionNotice'
 import { FavoritesNotice } from './components/FavoritesNotice'
 import { FavoritesPage } from './pages/FavoritesPage'
+import { ProfilePage } from './pages/ProfilePage'
 import { defaultMovieFilters } from './data/movieFilters'
 import { useMovies } from './hooks/useMovies'
 import type { MovieFilterValues } from './types/movieFilters'
@@ -76,6 +77,7 @@ function App() {
           />
           <Route path="/movies/:movieId" element={<MovieDetailsPage />} />
           <Route path="/favorites" element={<FavoritesPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />

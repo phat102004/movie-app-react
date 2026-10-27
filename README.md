@@ -1,8 +1,12 @@
-# Cineverse — Phase 6.3C: React Favorites Integration
+# Cineverse — Phase 6.4B: Profile Frontend UI
 
 React + TypeScript + Vite với giao diện Minimal Editorial Cinema. Dữ liệu phim được tải qua proxy Node.js cục bộ; token TMDB chỉ nằm trên server.
 
 Backend dùng Node.js, PostgreSQL và Prisma 7; mật khẩu hash Argon2id, phiên đăng nhập lưu phía server với cookie HTTP-only. Frontend dùng React Router, API service và custom hooks.
+
+Phase 6.4B thêm trang **`/profile`** với Hero olive/ivory, avatar chữ cái, favoriteCount/ngày tham gia từ API và form sửa tên. Login → menu tài khoản → **Hồ sơ cá nhân**; guest được đưa tới Login rồi quay lại Profile. PATCH chỉ gửi name, Header cập nhật qua Me, dữ liệu được tách theo owner và có loading/error/retry. [File thay đổi, kiến trúc, tests và screenshot local](docs/phase-6.4b-profile-frontend.md).
+
+Phase 6.4A thêm **GET/PATCH `/api/profile`**: đọc id/name/email/createdAt và favoriteCount theo User đã xác thực; PATCH chỉ nhận tên 1–100 ký tự sau trim, kiểm tra CSRF/Origin và session còn hiệu lực tại write. Không migration, không đổi email/mật khẩu hoặc React UI. [API contract, phân quyền, tests và PowerShell](docs/phase-6.4a-profile-backend.md).
 
 Phase 6.3C kết nối **Favorites trên React**: nút tim dùng chung ở MovieCard/chi tiết, trang `/favorites`, state theo User và phục hồi từ API khi refresh. Đọc đủ cursor, khóa request trùng theo movieId, bỏ qua response lỗi thời và tải metadata qua proxy tối đa 4 request đồng thời. UI giữ ivory/cream/olive; chưa hỗ trợ TV Favorites. [Kiến trúc, file thay đổi, tests, screenshot local và hướng dẫn học](docs/phase-6.3c-favorites-frontend.md).
 
@@ -138,6 +142,11 @@ Nếu chưa có token, UI sẽ báo chưa cấu hình kết nối. Không tự c
 ## Endpoints và luồng dữ liệu
 
 ```text
+GET   /api/profile → session User → safe User DTO + relation _count.favorites → 200
+PATCH /api/profile → CSRF + session + strict name → conditional User UPDATE → 200
+```
+
+```text
 GET    /api/favorites          → session User → Prisma where userId + sort/pagination → 200
 POST   /api/favorites          → CSRF + session + movieId number → create/unique → 201/200
 DELETE /api/favorites/:movieId → CSRF + session → deleteMany where userId AND movieId → 204
@@ -221,6 +230,8 @@ Có thể chạy riêng bằng npm.cmd run dev:proxy và npm.cmd run dev:fronten
 
 Đọc tiếp:
 
+- [Phase 6.4B — Profile UI, cập nhật Header, protected routing và tests](docs/phase-6.4b-profile-frontend.md).
+- [Phase 6.4A — Profile backend, name validation, session guard và PowerShell](docs/phase-6.4a-profile-backend.md).
 - [Phase 6.3C — React Favorites, Context, phân trang và metadata](docs/phase-6.3c-favorites-frontend.md).
 - [Phase 6.3B — Favorites API, session/ownership, pagination và PowerShell](docs/phase-6.3b-favorites-api.md).
 - [Phase 6.3A — Favorite model, migration/guards, kiểm thử RAM và pgAdmin](docs/phase-6.3a-favorites-database.md).
@@ -256,4 +267,8 @@ Có thể chạy riêng bằng npm.cmd run dev:proxy và npm.cmd run dev:fronten
 
 **Xác minh Phase 6.3C:** 205 tests đạt (134 backend + 71 frontend, gồm 21 tests mới), Favorites browser 12 nhóm đạt; auth/movie/layout regression và lint/typecheck/build đạt. UI Favorites kiểm tra tại 375/768/1024/1440px. Tests dùng DB/TMDB fixtures, không ghi PostgreSQL thật. Không sửa backend/schema/migration/dependencies trong phase này.
 
-Dừng tại Phase 6.3C. Có bảng, API và UI Favorite theo User; nút Yêu thích mở `/favorites`. Auth UI giữ nguyên; email delivery cần người dùng cấu hình để nhận link thật. Chưa thêm TV Favorites, JWT/OAuth/MFA hoặc phát phim đầy đủ. Khi đưa SPA lên hosting cần fallback các URL giao diện về index.html (bao gồm `/favorites`), đặt no-store cho trang recovery và Referrer-Policy: no-referrer; xem tài liệu Phase 6.2D/6.2E.
+**Xác minh Phase 6.4A:** 235 tests đạt (164 backend + 71 frontend, gồm 30 Profile tests mới); lint/typecheck/build và db:validate/db:check đạt. Không schema drift; counts/history giữ nguyên (User 2, Session 1, ResetToken 0, Favorite 4; 4 migrations). PATCH/Profile chỉ kiểm thử bằng fixtures; Prisma Client + pg adapter cũng được kiểm chứng với PostgreSQL WASM RAM. Không sửa tài khoản thật, schema/migration hoặc React UI.
+
+**Xác minh Phase 6.4B:** 251 tests đạt (164 backend + 87 frontend, gồm 16 frontend Profile tests mới), Profile browser 10 nhóm và Favorites browser 12 nhóm đạt; auth/movie/layout regression và lint/typecheck/build đạt. Profile view/edit kiểm tra tại 375/768/1024/1440px; fixtures không sửa tài khoản thật. Không đổi backend/schema/migration trong phase frontend.
+
+Dừng tại Phase 6.4B. Có Profile API/UI và đồng bộ tên trên Header; email chỉ đọc, chưa đổi mật khẩu/avatar. Favorites và Auth UI giữ nguyên; email delivery cần người dùng cấu hình để nhận link thật. Chưa thêm TV Favorites, JWT/OAuth/MFA hoặc phát phim đầy đủ. Khi đưa SPA lên hosting cần fallback các URL giao diện về index.html (bao gồm `/favorites` và `/profile`), đặt no-store cho trang recovery và Referrer-Policy: no-referrer; xem tài liệu Phase 6.2D/6.2E.

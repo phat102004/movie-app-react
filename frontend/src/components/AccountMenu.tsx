@@ -130,6 +130,13 @@ export function AccountMenu() {
         >
           <p className="account-panel-name">{user.name}</p>
           <p className="account-panel-email">{user.email}</p>
+          <Link
+            className="account-profile-link"
+            to="/profile"
+            onClick={() => setOpenUserId(null)}
+          >
+            Hồ sơ cá nhân
+          </Link>
           {error && (
             <p className="auth-field-error" role="alert">
               {error}

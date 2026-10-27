@@ -1,6 +1,6 @@
-// Cùng cookie/CSRF policy cho Auth và Favorites; browser tự gửi Origin.
+// Cùng cookie/CSRF policy cho Auth, Favorites và Profile; browser tự gửi Origin.
 export function sessionRequestInit(
-  method: 'GET' | 'POST' | 'DELETE',
+  method: 'GET' | 'POST' | 'DELETE' | 'PATCH',
   signal?: AbortSignal,
   body?: unknown,
 ): RequestInit {

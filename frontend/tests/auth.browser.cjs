@@ -297,6 +297,13 @@ async function main() {
     await page.keyboard.press('Tab')
     assert.equal(
       await page
+        .getByRole('link', { name: 'Hồ sơ cá nhân', exact: true })
+        .evaluate((element) => element === document.activeElement),
+      true,
+    )
+    await page.keyboard.press('Tab')
+    assert.equal(
+      await page
         .getByRole('button', { name: 'Đăng xuất', exact: true })
         .evaluate((node) => node === document.activeElement),
       true,

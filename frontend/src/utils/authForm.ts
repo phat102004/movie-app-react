@@ -53,6 +53,7 @@ export function authReturnPath(state: unknown): string {
   // Allowlist route nội bộ có thật; chặn external URL và auth redirect loop.
   if (path === '/') return '/'
   if (path === '/favorites') return '/favorites'
+  if (path === '/profile') return '/profile'
   return typeof path === 'string' &&
     /^\/movies\/[1-9]\d*$/.test(path) &&
     Number(path.slice(8)) <= 2_147_483_647

@@ -1,4 +1,5 @@
 import { HttpError } from '../http.mjs'
+import { readDisplayName } from './name-validation.mjs'
 
 export function normalizeEmail(value) {
   return typeof value === 'string' ? value.trim().toLowerCase() : ''
@@ -36,19 +37,11 @@ export function validateRegistration(input) {
     )
   }
   const fields = {}
-  const name = typeof input.name === 'string' ? input.name.trim() : ''
-  const nameCharacters = Array.from(name)
+  const { name, valid: validName } = readDisplayName(input.name)
   const email = normalizeEmail(input.email)
   // Không trim, normalize hoặc tự ý thay đổi mật khẩu.
   const password = input.password
-  if (
-    !name ||
-    nameCharacters.length > 100 ||
-    nameCharacters.some(
-      (character) =>
-        character.codePointAt(0) < 32 || character.codePointAt(0) === 127,
-    )
-  )
+  if (!validName)
     fields.name = 'Tên phải có từ 1 đến 100 ký tự, không chứa ký tự điều khiển.'
   if (!email || email.length > 254 || !isValidEmail(email))
     fields.email = 'Email không hợp lệ hoặc dài quá 254 ký tự.'
