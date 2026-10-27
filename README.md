@@ -1,8 +1,10 @@
-# Cineverse — Phase 6.4B: Profile Frontend UI
+# Cineverse — Phase 6.4C: Change Password & Account Security
 
 React + TypeScript + Vite với giao diện Minimal Editorial Cinema. Dữ liệu phim được tải qua proxy Node.js cục bộ; token TMDB chỉ nằm trên server.
 
 Backend dùng Node.js, PostgreSQL và Prisma 7; mật khẩu hash Argon2id, phiên đăng nhập lưu phía server với cookie HTTP-only. Frontend dùng React Router, API service và custom hooks.
+
+Phase 6.4C thêm **POST `/api/profile/change-password`** và Security Section tại `/profile`. Xác minh password hiện tại, hash Argon2id mới; transaction đổi hash/thu hồi toàn bộ sessions và recovery links cũ, rồi trả 204 + clear cookie. Frontend về Login với notice, không tự login; policy/CSRF/Origin/cookie giữ nguyên. [Contract, concurrency, tests và hướng dẫn tài khoản test](docs/phase-6.4c-change-password.md).
 
 Phase 6.4B thêm trang **`/profile`** với Hero olive/ivory, avatar chữ cái, favoriteCount/ngày tham gia từ API và form sửa tên. Login → menu tài khoản → **Hồ sơ cá nhân**; guest được đưa tới Login rồi quay lại Profile. PATCH chỉ gửi name, Header cập nhật qua Me, dữ liệu được tách theo owner và có loading/error/retry. [File thay đổi, kiến trúc, tests và screenshot local](docs/phase-6.4b-profile-frontend.md).
 
@@ -142,6 +144,11 @@ Nếu chưa có token, UI sẽ báo chưa cấu hình kết nối. Không tự c
 ## Endpoints và luồng dữ liệu
 
 ```text
+POST /api/profile/change-password → session + CSRF + old password → Argon2id
+  → transaction User/Session locks + password CAS + revoke sessions/reset links → 204 + clear cookie
+```
+
+```text
 GET   /api/profile → session User → safe User DTO + relation _count.favorites → 200
 PATCH /api/profile → CSRF + session + strict name → conditional User UPDATE → 200
 ```
@@ -230,6 +237,7 @@ Có thể chạy riêng bằng npm.cmd run dev:proxy và npm.cmd run dev:fronten
 
 Đọc tiếp:
 
+- [Phase 6.4C — Đổi mật khẩu, transaction/revocation và Security UI](docs/phase-6.4c-change-password.md).
 - [Phase 6.4B — Profile UI, cập nhật Header, protected routing và tests](docs/phase-6.4b-profile-frontend.md).
 - [Phase 6.4A — Profile backend, name validation, session guard và PowerShell](docs/phase-6.4a-profile-backend.md).
 - [Phase 6.3C — React Favorites, Context, phân trang và metadata](docs/phase-6.3c-favorites-frontend.md).
@@ -271,4 +279,6 @@ Có thể chạy riêng bằng npm.cmd run dev:proxy và npm.cmd run dev:fronten
 
 **Xác minh Phase 6.4B:** 251 tests đạt (164 backend + 87 frontend, gồm 16 frontend Profile tests mới), Profile browser 10 nhóm và Favorites browser 12 nhóm đạt; auth/movie/layout regression và lint/typecheck/build đạt. Profile view/edit kiểm tra tại 375/768/1024/1440px; fixtures không sửa tài khoản thật. Không đổi backend/schema/migration trong phase frontend.
 
-Dừng tại Phase 6.4B. Có Profile API/UI và đồng bộ tên trên Header; email chỉ đọc, chưa đổi mật khẩu/avatar. Favorites và Auth UI giữ nguyên; email delivery cần người dùng cấu hình để nhận link thật. Chưa thêm TV Favorites, JWT/OAuth/MFA hoặc phát phim đầy đủ. Khi đưa SPA lên hosting cần fallback các URL giao diện về index.html (bao gồm `/favorites` và `/profile`), đặt no-store cho trang recovery và Referrer-Policy: no-referrer; xem tài liệu Phase 6.2D/6.2E.
+**Xác minh Phase 6.4C:** 287 tests đạt (187 backend + 100 frontend; thêm 23 backend và 13 frontend tests), 7 nhóm Change Password browser cùng hồi quy Profile/Favorites/Auth/movie/layout đạt; lint/typecheck/build và db:validate/db:check đạt. Không schema drift; counts/history giữ nguyên (User 3, Session 1, ResetToken 1, Favorite 3; 4 migrations). Positive password changes chỉ dùng fixtures/PGlite RAM; không đổi mật khẩu tài khoản thật.
+
+Dừng tại Phase 6.4C. Profile có sửa tên và đổi mật khẩu, email chỉ đọc/chưa avatar; password change buộc Login lại sau khi thu hồi sessions. Favorites và giao diện hiện có giữ nguyên; email delivery cần người dùng cấu hình để nhận link thật. Chưa thêm TV Favorites, JWT/OAuth/MFA hoặc phát phim đầy đủ. Khi đưa SPA lên hosting cần fallback các URL giao diện về index.html (bao gồm `/favorites` và `/profile`), đặt no-store cho trang recovery và Referrer-Policy: no-referrer; xem tài liệu Phase 6.2D/6.2E.

@@ -18,9 +18,11 @@ import { ProfilePage } from './pages/ProfilePage'
 import { defaultMovieFilters } from './data/movieFilters'
 import { useMovies } from './hooks/useMovies'
 import type { MovieFilterValues } from './types/movieFilters'
+import { useAuth } from './hooks/useAuth'
+import { hasPasswordChangedNotice } from './utils/passwordChangeForm'
 
 function App() {
-  const { pathname, key } = useLocation()
+  const { pathname, key, state } = useLocation()
   const isAuthPage = [
     '/login',
     '/register',
@@ -31,6 +33,18 @@ function App() {
     if (pathname !== '/reset-password') clearResetToken()
   }, [pathname])
   const navigate = useNavigate()
+  const { passwordChanged, acknowledgePasswordChange } = useAuth()
+  useEffect(() => {
+    if (!passwordChanged) return
+    // Giữ cờ đến khi Router nhận location mới; không để Profile guest redirect mất notice.
+    if (pathname === '/login' && hasPasswordChangedNotice(state))
+      acknowledgePasswordChange()
+    else
+      void navigate('/login', {
+        replace: true,
+        state: { passwordChanged: true, from: '/profile' },
+      })
+  }, [passwordChanged, acknowledgePasswordChange, navigate, pathname, state])
   // Hook và State ở ngoài Routes nên không bị mất khi mở trang chi tiết.
   const catalog = useMovies(pathname === '/')
   const [searchQuery, setSearchQuery] = useState('')

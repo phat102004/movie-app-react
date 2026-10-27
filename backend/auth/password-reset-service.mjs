@@ -5,6 +5,7 @@ import { HttpError } from '../http.mjs'
 import { publicAuthError } from './errors.mjs'
 import { hashRegistrationPassword } from './password.mjs'
 import { normalizeEmail, isValidEmail } from './validation.mjs'
+import { isValidPassword } from './password-policy.mjs'
 
 export const forgotMessage =
   'Nếu email này có tài khoản Cineverse, chúng tôi sẽ gửi hướng dẫn đặt lại mật khẩu.'
@@ -44,11 +45,7 @@ export function validateReset(input) {
     !resetTokenPattern.test(input.token)
   )
     throw invalidReset()
-  if (
-    typeof input.password !== 'string' ||
-    Array.from(input.password).length < 12 ||
-    Array.from(input.password).length > 128
-  )
+  if (!isValidPassword(input.password))
     throw new HttpError(
       400,
       'VALIDATION_ERROR',

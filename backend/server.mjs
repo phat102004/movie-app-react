@@ -14,6 +14,8 @@ import { createFavoriteService } from './favorites/favorite-service.mjs'
 import { createFavoriteHandler } from './favorites/favorite-routes.mjs'
 import { createProfileService } from './profile/profile-service.mjs'
 import { createProfileHandler } from './profile/profile-routes.mjs'
+import { createChangePasswordService } from './profile/change-password-service.mjs'
+import { createChangePasswordHandler } from './profile/change-password-routes.mjs'
 
 export function createAppServer({
   tmdb = {},
@@ -22,6 +24,7 @@ export function createAppServer({
   passwordReset = {},
   favorites = {},
   profile = {},
+  passwordChange = {},
 } = {}) {
   const config = auth.config ?? readAuthConfig()
   const sessions =
@@ -43,6 +46,18 @@ export function createAppServer({
   })
   const handleProxy = createProxyHandler(tmdb)
   const handleRegister = createRegisterHandler(registration)
+  const handlePasswordChange = createChangePasswordHandler({
+    ...passwordChange,
+    config,
+    sessions,
+    service:
+      passwordChange.service ??
+      createChangePasswordService({
+        ...passwordChange,
+        getClient: passwordChange.getClient ?? auth.getClient,
+        now: auth.now,
+      }),
+  })
   const handleProfile = createProfileHandler({
     ...profile,
     config,
@@ -93,6 +108,10 @@ export function createAppServer({
           url = new URL(request.url ?? '/', 'http://localhost')
         } catch {
           throw new HttpError(400, 'BAD_REQUEST', 'Đường dẫn không hợp lệ.')
+        }
+        if (url.pathname === '/api/profile/change-password') {
+          await handlePasswordChange(request, response, url)
+          return
         }
         if (
           url.pathname === '/api/profile' ||

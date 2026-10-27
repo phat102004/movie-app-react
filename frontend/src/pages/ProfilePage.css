@@ -321,3 +321,35 @@
     font-size: 13px;
   }
 }
+.profile-password-input {
+  display: flex;
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+}
+.profile-field .profile-password-input input {
+  border: 0;
+  background: transparent;
+}
+.profile-password-input:focus-within {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 3px;
+}
+.profile-field .profile-password-input input:focus-visible {
+  outline: none;
+}
+.profile-password-input button {
+  align-self: stretch;
+  flex-shrink: 0;
+  min-width: 52px;
+  border: 0;
+  border-left: 1px solid var(--border);
+  color: var(--accent-strong);
+  background: var(--background);
+  font-size: 12px;
+}
+.profile-password-input button:disabled {
+  color: var(--muted);
+}
+.profile-security .profile-account-heading p:last-child {
+  max-width: 580px;
+}

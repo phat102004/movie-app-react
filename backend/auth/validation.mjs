@@ -1,5 +1,6 @@
 import { HttpError } from '../http.mjs'
 import { readDisplayName } from './name-validation.mjs'
+import { isValidPassword } from './password-policy.mjs'
 
 export function normalizeEmail(value) {
   return typeof value === 'string' ? value.trim().toLowerCase() : ''
@@ -45,11 +46,7 @@ export function validateRegistration(input) {
     fields.name = 'Tên phải có từ 1 đến 100 ký tự, không chứa ký tự điều khiển.'
   if (!email || email.length > 254 || !isValidEmail(email))
     fields.email = 'Email không hợp lệ hoặc dài quá 254 ký tự.'
-  if (
-    typeof password !== 'string' ||
-    Array.from(password).length < 12 ||
-    Array.from(password).length > 128
-  )
+  if (!isValidPassword(password))
     fields.password = 'Mật khẩu phải có từ 12 đến 128 ký tự.'
   if (Object.keys(fields).length) {
     throw new HttpError(
@@ -75,9 +72,7 @@ export function validateLogin(input) {
   if (
     email.length > 254 ||
     !isValidEmail(email) ||
-    typeof password !== 'string' ||
-    Array.from(password).length < 1 ||
-    Array.from(password).length > 128
+    !isValidPassword(password, 1)
   )
     throw new HttpError(
       400,

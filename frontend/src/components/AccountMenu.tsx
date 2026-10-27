@@ -6,7 +6,7 @@ import { authReturnPath } from '../utils/authForm'
 import './Auth.css'
 
 export function AccountMenu() {
-  const { user, status, logout, isSigningOut } = useAuth()
+  const { user, status, logout, isSigningOut, isChangingPassword } = useAuth()
   const { pathname, state } = useLocation()
   const returnTo =
     pathname === '/login' || pathname === '/register'
@@ -145,7 +145,7 @@ export function AccountMenu() {
           <button
             className="account-logout"
             type="button"
-            disabled={isSigningOut}
+            disabled={isSigningOut || isChangingPassword}
             onClick={() => void signOut()}
           >
             {isSigningOut ? 'Đang đăng xuất…' : 'Đăng xuất'}

@@ -3,6 +3,7 @@ import { Link, Navigate } from 'react-router'
 import { useAuth } from '../hooks/useAuth'
 import { useProfile } from '../hooks/useProfile'
 import { ProfileEditForm } from '../components/ProfileEditForm'
+import { ChangePasswordSection } from '../components/ChangePasswordSection'
 import './ProfilePage.css'
 
 function ProfileLoading() {
@@ -20,7 +21,15 @@ function ProfileLoading() {
 }
 
 export function ProfilePage() {
-  const { user, status, isSigningOut, refreshUser, isRefreshing } = useAuth()
+  const {
+    user,
+    status,
+    isSigningOut,
+    refreshUser,
+    isRefreshing,
+    passwordChanged,
+  } = useAuth()
+  if (passwordChanged) return <ProfileLoading />
   if (status === 'guest')
     return <Navigate to="/login" replace state={{ from: '/profile' }} />
   if (status === 'loading' || isSigningOut) return <ProfileLoading />
@@ -46,7 +55,7 @@ export function ProfilePage() {
 }
 
 function ProfileContent({ userId }: { userId: string }) {
-  const { user, refreshUser, isRefreshing } = useAuth()
+  const { user, refreshUser, isRefreshing, isChangingPassword } = useAuth()
   const {
     profile,
     error,
@@ -167,6 +176,7 @@ function ProfileContent({ userId }: { userId: string }) {
               ref={editButton}
               type="button"
               className="profile-secondary-button"
+              disabled={isChangingPassword}
               onClick={() => {
                 clearFeedback()
                 setEditing(true)
@@ -212,6 +222,7 @@ function ProfileContent({ userId }: { userId: string }) {
           </dl>
         )}
       </section>
+      <ChangePasswordSection disabled={editing || isSaving} />
     </article>
   )
 }

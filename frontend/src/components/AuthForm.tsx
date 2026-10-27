@@ -12,6 +12,7 @@ import {
   validateRegisterForm,
 } from '../utils/authForm'
 import './Auth.css'
+import { hasPasswordChangedNotice } from '../utils/passwordChangeForm'
 
 export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
   const isRegister = mode === 'register'
@@ -155,6 +156,11 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
           </p>
         ) : (
           <>
+            {!isRegister && hasPasswordChangedNotice(state) && (
+              <p className="auth-success" role="status">
+                Đổi mật khẩu thành công. Vui lòng đăng nhập lại.
+              </p>
+            )}
             {!isRegister && notice.registered && (
               <p className="auth-success" role="status">
                 Tài khoản đã được tạo. Hãy đăng nhập để tiếp tục.

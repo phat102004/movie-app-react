@@ -23,6 +23,20 @@ export function Reader() {
       <output id="auth-user">{auth.user?.name ?? 'none'}</output>
       <output id="auth-error">{auth.error?.code ?? ''}</output>
       <output id="action-error">{actionError}</output>
+      <output id="changing-password">{String(auth.isChangingPassword)}</output>
+      <output id="password-changed">{String(auth.passwordChanged)}</output>
+      <button
+        onClick={() => {
+          void auth
+            .changePassword({
+              currentPassword: 'Old synthetic account password 123!',
+              newPassword: 'New synthetic account password 456!',
+            })
+            .catch(() => setActionError('password-error'))
+        }}
+      >
+        Change password
+      </button>
       <button onClick={() => void auth.refreshUser()}>Refresh</button>
       <button
         onClick={() => {
