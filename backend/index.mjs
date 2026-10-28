@@ -1,11 +1,15 @@
 import { loadBackendEnv } from './env.mjs'
 import { disconnectDatabase } from './database/client.mjs'
 import { createAppServer } from './server.mjs'
+import { readTmdbProxyConfig } from './upstream-scheduler.mjs'
 
 loadBackendEnv()
 
 const server = createAppServer({
-  tmdb: { token: process.env.TMDB_READ_ACCESS_TOKEN },
+  tmdb: {
+    token: process.env.TMDB_READ_ACCESS_TOKEN,
+    ...readTmdbProxyConfig(),
+  },
 })
 server.on('error', (error) => {
   console.error(

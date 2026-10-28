@@ -1,5 +1,7 @@
 import { createServer } from 'node:http'
-import { sendJson } from './http.mjs'
+import { HttpError, sendJson } from './http.mjs'
+import { createUpstreamScheduler } from './upstream-scheduler.mjs'
+import { fetchTmdbResource, tmdbRequestKey } from './tmdb-client.mjs'
 
 const routes = new Map([
   ['/api/movies/popular', '/3/movie/popular'],
@@ -12,7 +14,18 @@ export function createProxyHandler({
   token = '',
   fetchImpl = fetch,
   timeoutMs = 8000,
+  queueTimeoutMs = 2000,
+  maxConcurrent = 6,
+  maxQueue = 32,
+  maxWaiters = 256,
 } = {}) {
+  const scheduler = createUpstreamScheduler({
+    timeoutMs,
+    queueTimeoutMs,
+    maxConcurrent,
+    maxQueue,
+    maxWaiters,
+  })
   return async (request, response) => {
     let url
     try {
@@ -71,17 +84,12 @@ export function createProxyHandler({
     }
 
     const controller = new AbortController()
-    let timedOut = false
-    const timer = setTimeout(() => {
-      timedOut = true
-      controller.abort()
-    }, timeoutMs)
-    timer.unref()
     const cancel = () => {
       if (!response.writableEnded) controller.abort()
     }
     request.once('aborted', cancel)
     response.once('close', cancel)
+    if (request.aborted || response.destroyed) controller.abort()
 
     try {
       const upstreamUrl = new URL(upstreamPath, 'https://api.themoviedb.org')
@@ -100,77 +108,33 @@ export function createProxyHandler({
       }
       if (movieRoute?.[2] === 'videos')
         upstreamUrl.searchParams.set('include_video_language', 'vi,en,null')
-      const upstream = await fetchImpl(upstreamUrl, {
-        headers: {
-          Authorization: `Bearer ${token.trim()}`,
-          Accept: 'application/json',
+      const data = await scheduler.run(
+        tmdbRequestKey(upstreamUrl),
+        (signal) => fetchTmdbResource(upstreamUrl, {
+          token,
+          fetchImpl,
+          signal,
+          detailsId: isDetails ? Number(movieRoute[1]) : undefined,
+        }),
+        { signal: controller.signal },
+      )
+      if (!controller.signal.aborted) sendJson(response, 200, data)
+    } catch (error) {
+      if (response.destroyed || controller.signal.aborted) return
+      const known = error instanceof HttpError
+      const status = known ? error.status : 502
+      const headers = error?.retryAfter
+        ? { 'Retry-After': error.retryAfter }
+        : status === 503 ? { 'Retry-After': '1' } : {}
+      sendJson(response, status, {
+        error: {
+          code: known ? error.code : 'UPSTREAM_UNAVAILABLE',
+          message: known
+            ? error.message
+            : 'Không thể kết nối hoặc đọc dữ liệu TMDB. Vui lòng thử lại.',
         },
-        signal: controller.signal,
-      })
-      if (!upstream.ok) {
-        const status =
-          [400, 401, 403, 429].includes(upstream.status) ||
-          (movieRoute && upstream.status === 404)
-            ? upstream.status
-            : 502
-        const messages = {
-          400: 'TMDB không chấp nhận yêu cầu dữ liệu phim này.',
-          401: 'Thông tin kết nối TMDB chưa hợp lệ. Kiểm tra token trên server.',
-          403: 'TMDB từ chối quyền truy cập dữ liệu.',
-          404: 'Không tìm thấy phim trên TMDB.',
-          429: 'TMDB đang giới hạn lượt truy cập. Vui lòng đợi một lát rồi thử lại.',
-        }
-        const retryAfter = upstream.headers.get('retry-after')
-        const headers =
-          status === 429 && retryAfter && /^\d+$/.test(retryAfter)
-            ? { 'Retry-After': retryAfter }
-            : {}
-        sendJson(
-          response,
-          status,
-          {
-            error: {
-              code: `TMDB_HTTP_${upstream.status}`,
-              message:
-                messages[status] ?? 'TMDB tạm thời không thể cung cấp dữ liệu.',
-            },
-          },
-          headers,
-        )
-        return
-      }
-      const data = await upstream.json()
-      const field =
-        upstreamPath === '/3/genre/movie/list' ? 'genres' : 'results'
-      const valid =
-        data &&
-        typeof data === 'object' &&
-        (isDetails
-          ? data.id === Number(movieRoute[1]) &&
-            Array.isArray(data.genres) &&
-            Array.isArray(data.videos?.results) &&
-            Array.isArray(data.recommendations?.results)
-          : Array.isArray(data[field]))
-      if (!valid) {
-        sendJson(response, 502, {
-          error: {
-            code: 'INVALID_UPSTREAM_DATA',
-            message: 'TMDB trả về dữ liệu không hợp lệ.',
-          },
-        })
-        return
-      }
-      sendJson(response, 200, data)
-    } catch {
-      if (response.destroyed) return
-      const code = timedOut ? 'UPSTREAM_TIMEOUT' : 'UPSTREAM_UNAVAILABLE'
-      const message = timedOut
-        ? 'TMDB phản hồi quá lâu. Vui lòng thử lại.'
-        : 'Không thể kết nối hoặc đọc dữ liệu TMDB. Vui lòng thử lại.'
-      // Không trả lỗi thô, headers hoặc token về trình duyệt hay log.
-      sendJson(response, timedOut ? 504 : 502, { error: { code, message } })
+      }, headers)
     } finally {
-      clearTimeout(timer)
       request.off('aborted', cancel)
       response.off('close', cancel)
     }
