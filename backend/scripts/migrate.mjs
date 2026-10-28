@@ -3,7 +3,11 @@ import { createHash } from 'node:crypto'
 import { readFile, readdir } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
-import { getPrisma, disconnectDatabase } from '../database/client.mjs'
+import {
+  getMigrationPrisma as getPrisma,
+  disconnectMigrationDatabase as disconnectDatabase,
+} from '../database/migration-client.mjs'
+import { loadBackendEnv } from '../env.mjs'
 import {
   DatabaseConfigError,
   databaseErrorMessage,
@@ -27,6 +31,9 @@ const timeout = setTimeout(() => {
 }, 180_000)
 
 try {
+  loadBackendEnv()
+  if (process.env.NODE_ENV === 'production')
+    throw new DatabaseConfigError('db:migrate chỉ dành cho local. Production dùng db:deploy:production sau khi DBA provision và review.')
   // Chỉ áp dụng các migration trong allowlist đã review; không nhận SQL tùy ý.
   const migrationsPath = new URL('../prisma/migrations/', import.meta.url)
   const directories = (await readdir(migrationsPath, { withFileTypes: true }))

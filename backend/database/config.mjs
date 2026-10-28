@@ -68,6 +68,8 @@ export function readDatabaseConfig(value = process.env.DATABASE_URL) {
 
 export function databaseErrorMessage(error) {
   if (error instanceof DatabaseConfigError) return error.message
+  if (process.env.NODE_ENV === 'production')
+    return 'Thao tác PostgreSQL production thất bại. Kiểm tra TLS, credentials và quyền đã provision; chi tiết nội bộ đã được ẩn.'
   const code = error?.code ?? error?.cause?.code
   const kind = error?.meta?.driverAdapterError?.cause?.kind
   if (

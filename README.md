@@ -1,8 +1,12 @@
-# Cineverse — Phase 6.4C: Change Password & Account Security
+# Cineverse
 
 React + TypeScript + Vite với giao diện Minimal Editorial Cinema. Dữ liệu phim được tải qua proxy Node.js cục bộ; token TMDB chỉ nằm trên server.
 
 Backend dùng Node.js, PostgreSQL và Prisma 7; mật khẩu hash Argon2id, phiên đăng nhập lưu phía server với cookie HTTP-only. Frontend dùng React Router, API service và custom hooks.
+
+Phase 7B.4 bổ sung [PostgreSQL production role security](docs/phase-7b4-postgresql-production-security.md): runtime `cineverse_app`, migrator `cineverse_migrator`, hai connection strings tách biệt, TLS strict và metadata/ACL checks. Local vẫn giữ `cineverse_dev`; không tự tạo role, cấp quyền, đổi owner hoặc sửa `.env`. SQL provisioning chỉ dành cho DBA chạy thủ công trên database production riêng.
+
+`db:roles:check` là kiểm tra production chỉ đọc (`-- --migration` cho migrator). `db:deploy:production` là lệnh **ghi migration**, chỉ chạy có chủ đích sau provisioning/backup/review; không dùng thay `db:migrate` local. Runtime production không được cấp migration secret. Đọc toàn bộ workflow trước khi bật `NODE_ENV=production`.
 
 Phase 6.4C thêm **POST `/api/profile/change-password`** và Security Section tại `/profile`. Xác minh password hiện tại, hash Argon2id mới; transaction đổi hash/thu hồi toàn bộ sessions và recovery links cũ, rồi trả 204 + clear cookie. Frontend về Login với notice, không tự login; policy/CSRF/Origin/cookie giữ nguyên. [Contract, concurrency, tests và hướng dẫn tài khoản test](docs/phase-6.4c-change-password.md).
 

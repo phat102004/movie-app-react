@@ -19,6 +19,8 @@
     "db:migrate": "node backend/scripts/migrate.mjs",
     "db:studio": "prisma studio --config backend/prisma.config.mjs --browser none",
     "db:check": "node backend/scripts/check-database.mjs",
+    "db:roles:check": "node backend/scripts/check-production-roles.mjs",
+    "db:deploy:production": "node backend/scripts/deploy-production.mjs",
     "db:sessions:cleanup": "node backend/scripts/cleanup-sessions.mjs"
   },
   "dependencies": {
