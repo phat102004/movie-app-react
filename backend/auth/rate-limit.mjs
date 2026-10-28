@@ -1,4 +1,4 @@
-// Fixed window theo IP socket thực; không tin X-Forwarded-For do client tự gửi.
+// Fixed window: route supplies the normalized IP from the shared trusted-proxy policy.
 // Map có giới hạn và không có timer nền; chỉ phù hợp một process backend local.
 export function createRegisterLimiter({
   limit = 5,

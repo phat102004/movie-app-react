@@ -1,3 +1,4 @@
+import { socketClientIp } from '../client-ip.mjs'
 import { HttpError, readJsonBody } from '../http.mjs'
 import { readSessionToken, sessionCookie } from '../auth/cookies.mjs'
 import { assertAuthRequest } from '../auth/security.mjs'
@@ -9,6 +10,7 @@ export function createChangePasswordHandler({
   config,
   sessions,
   service,
+  getClientIp = socketClientIp,
   ipLimiter = createRegisterLimiter({ limit: 10 }),
   userLimiter = createRegisterLimiter({ limit: 5 }),
   maxConcurrent = 2,
@@ -29,7 +31,7 @@ export function createChangePasswordHandler({
       throw new HttpError(405, 'METHOD_NOT_ALLOWED', 'Chỉ hỗ trợ POST.')
     }
     assertAuthRequest(request, config)
-    limit(response, ipLimiter(request.socket.remoteAddress ?? 'unknown'))
+    limit(response, ipLimiter(getClientIp(request)))
     const token = readSessionToken(request.headers.cookie, config)
     const user = await sessions.currentUser(token)
     assertAccountBinding(request, user)

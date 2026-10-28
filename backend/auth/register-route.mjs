@@ -1,9 +1,11 @@
+import { socketClientIp } from '../client-ip.mjs'
 import { createRegistrationService } from './register-service.mjs'
 import { createRegisterLimiter } from './rate-limit.mjs'
 import { readJsonBody, sendHttpError, sendJson } from '../http.mjs'
 
 export function createRegisterHandler({
   registerUser = createRegistrationService(),
+  getClientIp = socketClientIp,
   limiter = createRegisterLimiter(),
   maxConcurrent = 2,
   bodyTimeoutMs = 10_000,
@@ -20,7 +22,7 @@ export function createRegisterHandler({
       )
       return
     }
-    const rate = limiter(request.socket.remoteAddress ?? 'unknown')
+    const rate = limiter(getClientIp(request))
     if (!rate.allowed) {
       request.resume()
       sendJson(

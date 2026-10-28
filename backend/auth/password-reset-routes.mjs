@@ -1,3 +1,4 @@
+import { socketClientIp } from '../client-ip.mjs'
 import { HttpError, readJsonBody, sendJson } from '../http.mjs'
 import { createLoginLimiter } from './login-rate-limit.mjs'
 import { createRegisterLimiter } from './rate-limit.mjs'
@@ -5,6 +6,7 @@ import { validateForgot, validateReset } from './password-reset-service.mjs'
 
 export function createPasswordResetHandlers({
   service,
+  getClientIp = socketClientIp,
   forgotLimiter = createLoginLimiter({
     ip: createRegisterLimiter({ limit: 10 }),
     account: createRegisterLimiter({ limit: 3 }),
@@ -26,8 +28,8 @@ export function createPasswordResetHandlers({
     check(
       response,
       mode === 'forgot'
-        ? forgotLimiter.takeIp(request.socket.remoteAddress ?? 'unknown')
-        : resetLimiter(request.socket.remoteAddress ?? 'unknown'),
+        ? forgotLimiter.takeIp(getClientIp(request))
+        : resetLimiter(getClientIp(request)),
     )
     const input = (mode === 'forgot' ? validateForgot : validateReset)(
       await readJsonBody(request),

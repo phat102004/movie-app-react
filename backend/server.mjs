@@ -1,3 +1,4 @@
+import { createClientIpResolver } from './client-ip.mjs'
 import { createServer } from 'node:http'
 import { createRegisterHandler } from './auth/register-route.mjs'
 import { createProxyHandler } from './proxy.mjs'
@@ -18,6 +19,7 @@ import { createChangePasswordService } from './profile/change-password-service.m
 import { createChangePasswordHandler } from './profile/change-password-routes.mjs'
 
 export function createAppServer({
+  trustedProxyCidrs = process.env.TRUSTED_PROXY_CIDRS ?? '',
   tmdb = {},
   registration = {},
   auth = {},
@@ -26,6 +28,7 @@ export function createAppServer({
   profile = {},
   passwordChange = {},
 } = {}) {
+  const getClientIp = createClientIpResolver(trustedProxyCidrs)
   const config = auth.config ?? readAuthConfig()
   const sessions =
     auth.sessions ??
@@ -40,14 +43,16 @@ export function createAppServer({
     })
   const sessionHandlers = createSessionHandlers({
     ...auth,
+    getClientIp,
     config,
     sessions,
     login,
   })
   const handleProxy = createProxyHandler(tmdb)
-  const handleRegister = createRegisterHandler(registration)
+  const handleRegister = createRegisterHandler({ ...registration, getClientIp })
   const handlePasswordChange = createChangePasswordHandler({
     ...passwordChange,
+    getClientIp,
     config,
     sessions,
     service:
@@ -60,6 +65,7 @@ export function createAppServer({
   })
   const handleProfile = createProfileHandler({
     ...profile,
+    getClientIp,
     config,
     sessions,
     service:
@@ -71,6 +77,7 @@ export function createAppServer({
   })
   const handleFavorites = createFavoriteHandler({
     ...favorites,
+    getClientIp,
     config,
     sessions,
     service:
@@ -81,6 +88,7 @@ export function createAppServer({
   })
   const resetHandlers = createPasswordResetHandlers({
     ...passwordReset,
+    getClientIp,
     service:
       passwordReset.service ??
       createPasswordResetService({

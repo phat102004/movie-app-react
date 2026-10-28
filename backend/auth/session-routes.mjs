@@ -1,3 +1,4 @@
+import { socketClientIp } from '../client-ip.mjs'
 import { readJsonBody, sendJson, HttpError } from '../http.mjs'
 import { readSessionToken, sessionCookie } from './cookies.mjs'
 import { createLoginLimiter } from './login-rate-limit.mjs'
@@ -24,6 +25,7 @@ export function createSessionHandlers({
   config,
   sessions,
   login,
+  getClientIp = socketClientIp,
   limiter = createLoginLimiter(),
   maxConcurrent = 2,
 } = {}) {
@@ -33,7 +35,7 @@ export function createSessionHandlers({
       if (
         rateError(
           response,
-          limiter.takeIp(request.socket.remoteAddress ?? 'unknown'),
+          limiter.takeIp(getClientIp(request)),
         )
       ) {
         request.resume()

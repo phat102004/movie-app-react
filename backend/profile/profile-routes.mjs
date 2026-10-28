@@ -1,3 +1,4 @@
+import { socketClientIp } from '../client-ip.mjs'
 import { HttpError, readJsonBody, sendJson } from '../http.mjs'
 import { readSessionToken } from '../auth/cookies.mjs'
 import { assertAuthRequest } from '../auth/security.mjs'
@@ -9,6 +10,7 @@ export function createProfileHandler({
   config,
   sessions,
   service,
+  getClientIp = socketClientIp,
   ipLimiter = createRegisterLimiter({ limit: 300 }),
   userLimiter = createRegisterLimiter({ limit: 30 }),
 } = {}) {
@@ -29,7 +31,7 @@ export function createProfileHandler({
       throw new HttpError(405, 'METHOD_NOT_ALLOWED', 'Chỉ hỗ trợ GET, PATCH.')
     }
     assertAuthRequest(request, config)
-    checkLimit(response, ipLimiter(request.socket.remoteAddress ?? 'unknown'))
+    checkLimit(response, ipLimiter(getClientIp(request)))
     const token = readSessionToken(request.headers.cookie, config)
     const user = await sessions.currentUser(token)
     assertAccountBinding(request, user)
