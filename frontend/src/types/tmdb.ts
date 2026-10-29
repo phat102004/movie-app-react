@@ -42,6 +42,7 @@ export type TmdbCrewMember = { id: number; name: string; job: string }
 export type TmdbCredits = { cast: TmdbCastMember[]; crew: TmdbCrewMember[] }
 
 export type TmdbMovieDetails = TmdbMovie & {
+  metadataWarnings?: string[]
   genres: TmdbGenre[]
   runtime?: number | null
   status?: string | null

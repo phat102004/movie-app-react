@@ -92,7 +92,7 @@ async function main() {
     await vite.listen()
     const base = `http://127.0.0.1:${vite.httpServer.address().port}`
     config.allowedOrigins.add(base)
-    browser = await chromium.launch({ channel: 'msedge', headless: true })
+    browser = await chromium.launch(require('./browser-options.cjs'))
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } })
     await context.addInitScript(instrument)
     const pageA = await context.newPage(), pageB = await context.newPage()

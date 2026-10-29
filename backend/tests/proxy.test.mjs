@@ -284,7 +284,7 @@ for (const status of [400, 404, 429, 500]) {
   })
 }
 
-test('details sai ID hoặc thiếu JSON aggregate trả 502', async (t) => {
+test('details sai ID hoặc thiếu dữ liệu chính trả 502', async (t) => {
   for (const data of [
     {
       id: 42,
@@ -292,7 +292,7 @@ test('details sai ID hoặc thiếu JSON aggregate trả 502', async (t) => {
       videos: { results: [] },
       recommendations: { results: [] },
     },
-    { id: 27205, genres: [] },
+    { id: 27205 },
   ]) {
     const base = await startServer(t, {
       token: 'fixture',

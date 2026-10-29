@@ -55,8 +55,7 @@ export async function fetchTmdbResource(
   const valid =
     data && typeof data === 'object' &&
     (detailsId !== undefined
-      ? data.id === detailsId && Array.isArray(data.genres) &&
-        Array.isArray(data.videos?.results) && Array.isArray(data.recommendations?.results)
+      ? data.id === detailsId && Array.isArray(data.genres)
       : Array.isArray(data[field]))
   if (!valid)
     throw new HttpError(

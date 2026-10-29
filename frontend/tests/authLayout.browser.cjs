@@ -59,7 +59,7 @@ async function main() {
     await vite.listen()
     const base = `http://127.0.0.1:${vite.httpServer.address().port}`
     config.allowedOrigins.add(base)
-    browser = await chromium.launch({ channel: 'msedge', headless: true })
+    browser = await chromium.launch(require('./browser-options.cjs'))
     const page = await browser.newPage({ reducedMotion: 'reduce' })
     page.setDefaultTimeout(10000)
     const errors = []

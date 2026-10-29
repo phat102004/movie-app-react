@@ -1,0 +1,9 @@
+.movie-load-notice {
+  margin-block: 20px;
+  padding: 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--accent-soft);
+  color: var(--text);
+}
+.movie-load-notice p { margin: 0 0 8px; }

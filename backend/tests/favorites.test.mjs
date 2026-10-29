@@ -177,6 +177,61 @@ async function fixture(t, options = {}) {
   }
 }
 
+test('M03: accepted in-flight Favorite may finish after Logout, always owned by its original account', async (t) => {
+  const f = await fixture(t)
+  const cookieA = await f.login()
+  let entered
+  const started = new Promise(resolve => { entered = resolve })
+  let release
+  const held = new Promise(resolve => { release = resolve })
+  t.after(() => release())
+  const create = f.client.favorite.create
+  f.client.favorite.create = async args => {
+    entered()
+    await held
+    return create(args)
+  }
+  const pending = f.request({ method: 'POST', cookie: cookieA, body: { movieId: 550 } })
+  await started
+  const logout = await authRequest(f.base, 'logout', { cookie: cookieA, body: {} })
+  assert.equal(logout.response.status, 204)
+  const rejected = await f.request({ method: 'POST', cookie: cookieA, body: { movieId: 551 } })
+  assert.equal(rejected.response.status, 401)
+  const cookieB = await f.login('b@fixture.test')
+  release()
+  assert.equal((await pending).response.status, 201)
+  assert.equal(f.rows.get(f.key(idA, 550)).userId, idA)
+  assert.equal(f.rows.has(f.key(idB, 550)), false)
+  assert.deepEqual((await f.request({ cookie: cookieB })).body.favorites, [])
+})
+
+test('M03: accepted in-flight DELETE after Logout removes only A, never B with the same movie', async (t) => {
+  const f = await fixture(t)
+  const cookieA = await f.login()
+  await f.request({ method: 'POST', cookie: cookieA, body: { movieId: 550 } })
+  let entered
+  const started = new Promise(resolve => { entered = resolve })
+  let release
+  const held = new Promise(resolve => { release = resolve })
+  t.after(() => release())
+  const remove = f.client.favorite.deleteMany
+  f.client.favorite.deleteMany = async args => {
+    entered()
+    await held
+    return remove(args)
+  }
+  const pending = f.request({ method: 'DELETE', cookie: cookieA, movieId: 550 })
+  await started
+  assert.equal((await authRequest(f.base, 'logout', { cookie: cookieA })).response.status, 204)
+  assert.equal((await f.request({ method: 'DELETE', cookie: cookieA, movieId: 550 })).response.status, 401)
+  const cookieB = await f.login('b@fixture.test')
+  await f.request({ method: 'POST', cookie: cookieB, body: { movieId: 550 } })
+  release()
+  assert.equal((await pending).response.status, 204)
+  assert.equal(f.rows.has(f.key(idA, 550)), false)
+  assert.equal(f.rows.get(f.key(idB, 550)).userId, idB)
+})
+
 for (const method of ['GET', 'POST', 'DELETE']) {
   test(`${method} Favorites không session → 401, không gọi Prisma Favorite`, async (t) => {
     const f = await fixture(t)

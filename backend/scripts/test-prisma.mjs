@@ -1,27 +1,17 @@
 import { getPrisma, disconnectDatabase } from '../database/client.mjs'
+import { databaseErrorMessage } from '../database/config.mjs'
 
 try {
-  console.log('1. Đang khởi tạo Prisma Client...')
-
   const prisma = await getPrisma()
-  console.log('2. PRISMA CLIENT OK')
-
-  console.log('3. Đang thử truy vấn PostgreSQL...')
-
-  const result = await prisma.$queryRaw`
-    SELECT current_database() AS database,
-           current_user AS username
-  `
-
-  console.log('4. PRISMA QUERY OK')
-  console.log(result)
+  await prisma.$queryRaw`SELECT 1`
+  console.info('PRISMA CLIENT / QUERY OK (read-only).')
 } catch (error) {
-  console.error('ERROR NAME:', error.name)
-  console.error('ERROR CODE:', error.code ?? error.cause?.code ?? 'unknown')
-  console.error(
-    'ERROR KIND:',
-    error.meta?.driverAdapterError?.cause?.kind ?? 'unknown'
-  )
+  console.error(databaseErrorMessage(error))
+  process.exitCode = 1
 } finally {
-  await disconnectDatabase().catch(() => {})
+  try { await disconnectDatabase() }
+  catch {
+    console.error('Không thể đóng Prisma Client; chi tiết nội bộ đã được ẩn.')
+    process.exitCode = 1
+  }
 }

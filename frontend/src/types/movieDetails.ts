@@ -18,6 +18,7 @@ export type CastMember = {
 export type MovieDirector = { id: number; name: string; job: string }
 
 export type MovieDetails = Movie & {
+  metadataWarnings?: string[]
   releaseDate: string | null
   runtime: number | null
   voteCount: number | null

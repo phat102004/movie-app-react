@@ -76,6 +76,7 @@ export function mapTmdbMovieDetails(
   ]
   return {
     ...movie,
+    metadataWarnings: data.metadataWarnings ?? [],
     releaseDate: movie.year !== null ? (data.release_date ?? null) : null,
     runtime: data.runtime && data.runtime > 0 ? data.runtime : null,
     voteCount: data.vote_count ?? null,

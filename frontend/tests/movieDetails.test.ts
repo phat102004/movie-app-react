@@ -144,9 +144,7 @@ test('details JSON validation chặn dữ liệu sai tại boundary', () => {
     {},
     { ...fixture, runtime: -1 },
     { ...fixture, genres: [{ id: '28', name: 'Sai' }] },
-    { ...fixture, videos: { results: [{ ...trailer, official: 'true' }] } },
     { ...fixture, production_countries: ['US'] },
-    { ...fixture, recommendations: {} },
   ])
     assert.throws(() => parseMovieDetails(value), ApiError)
 })
@@ -175,7 +173,7 @@ test('details service dùng URL nội bộ và AbortSignal, không gửi Authori
     'fetch',
     async (url: string, options: RequestInit) => {
       assert.equal(url, '/api/movies/27205')
-      assert.equal(options.signal, controller.signal)
+      assert.ok(options.signal instanceof AbortSignal)
       assert.equal(options.headers && 'Authorization' in options.headers, false)
       return Response.json(fixture)
     },

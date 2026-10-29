@@ -138,7 +138,7 @@ async function main() {
     const base = `http://127.0.0.1:${vite.httpServer.address().port}`
     resetOrigin = base
     config.allowedOrigins.add(base)
-    browser = await chromium.launch({ channel: 'msedge', headless: true })
+    browser = await chromium.launch(require('./browser-options.cjs'))
     const context = await browser.newContext({
       viewport: { width: 1440, height: 1000 },
       reducedMotion: 'reduce',

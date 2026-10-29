@@ -397,10 +397,7 @@ async function live(browser) {
 }
 
 ;(async () => {
-  const browser = await chromium.launch({
-    channel: process.env.CINEVERSE_BROWSER_CHANNEL || 'msedge',
-    headless: true,
-  })
+  const browser = await chromium.launch(require('./browser-options.cjs'))
   try {
     if (!process.argv.includes('--live-only')) await fixtures(browser)
     if (process.argv.includes('--live') || process.argv.includes('--live-only'))

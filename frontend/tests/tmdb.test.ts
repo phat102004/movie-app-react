@@ -139,7 +139,8 @@ test('service fetch đúng endpoint, chuyển signal, kiểm tra JSON', async (t
     globalThis,
     'fetch',
     async (url: string, options: RequestInit) => {
-      assert.equal(options.signal, controller.signal)
+      assert.ok(options.signal instanceof AbortSignal)
+      assert.notEqual(options.signal, controller.signal)
       assert.equal(options.headers && 'Authorization' in options.headers, false)
       return Response.json(
         url === '/api/genres' ? { genres } : { page: 1, results: [movie] },

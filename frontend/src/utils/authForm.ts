@@ -3,6 +3,7 @@ import type {
   LoginInput,
   RegisterInput,
 } from '../types/auth.ts'
+import { validateProfileName } from './profileForm.ts'
 
 const validEmail = (email: string) =>
   email.trim().length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
@@ -42,8 +43,8 @@ export function validateRegisterForm(
     ...validateEmailForm(input.email),
     ...validateNewPasswordForm(input),
   }
-  if (!input.name.trim() || Array.from(input.name.trim()).length > 100)
-    errors.name = 'Họ và tên cần có từ 1 đến 100 ký tự.'
+  const { error } = validateProfileName(input.name)
+  if (error) errors.name = error
   return errors
 }
 

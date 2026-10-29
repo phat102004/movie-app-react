@@ -5,6 +5,7 @@ import { MovieDataState } from '../components/MovieDataState'
 import { MovieList } from '../components/MovieList'
 import { MovieTrailer } from '../components/MovieTrailer'
 import { MovieCast } from '../components/MovieCast'
+import { MovieLoadNotice } from '../components/MovieLoadNotice'
 import { FavoriteButton } from '../components/FavoriteButton'
 import { useMovieDetails } from '../hooks/useMovieDetails'
 import { isValidMovieId } from '../utils/movieId'
@@ -117,6 +118,7 @@ export function MovieDetailsPage() {
         </ol>
         <span>TMDB / {movie.id}</span>
       </nav>
+      <MovieLoadNotice messages={movie.metadataWarnings ?? []} onRetry={retry} retryLabel="Thử lại" />
       <div className="details-intro">
         <figure className="details-poster">
           <DetailsImage

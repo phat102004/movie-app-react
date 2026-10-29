@@ -8,6 +8,7 @@ import type {
   TmdbCredits,
 } from '../types/tmdb.ts'
 import { isValidMovieId } from '../utils/movieId.ts'
+import { withRequestDeadline } from './requestDeadline.ts'
 
 export class ApiError extends Error {
   status: number | null
@@ -185,9 +186,10 @@ export function parseMovieDetails(value: unknown): TmdbMovieDetails {
     )
   )
     return invalidData()
-  if (!isRecord(value.videos) || !Array.isArray(value.videos.results))
-    return invalidData()
-  const videos: TmdbVideo[] = value.videos.results.map((video: unknown) => {
+  const metadataWarnings: string[] = []
+  const videoRecords = isRecord(value.videos) && Array.isArray(value.videos.results)
+    ? value.videos.results : null
+  const videos: TmdbVideo[] = (videoRecords ?? []).flatMap((video: unknown) => {
     if (
       !isRecord(video) ||
       typeof video.id !== 'string' ||
@@ -198,8 +200,8 @@ export function parseMovieDetails(value: unknown): TmdbMovieDetails {
       typeof video.official !== 'boolean' ||
       (video.iso_639_1 !== null && typeof video.iso_639_1 !== 'string')
     )
-      return invalidData()
-    return {
+      return []
+    return [{
       id: video.id,
       key: video.key,
       name: video.name,
@@ -207,8 +209,21 @@ export function parseMovieDetails(value: unknown): TmdbMovieDetails {
       type: video.type,
       official: video.official,
       iso_639_1: video.iso_639_1,
-    }
+    }]
   })
+  if (!videoRecords || videoRecords.length !== videos.length)
+    metadataWarnings.push('Thông tin trailer chưa tải đầy đủ; các video không hợp lệ đã được bỏ qua.')
+  let recommendations: TmdbMoviePage = { page: 1, results: [] }
+  if (isRecord(value.recommendations) && Number.isSafeInteger(value.recommendations.page) &&
+    typeof value.recommendations.page === 'number' && value.recommendations.page > 0 && Array.isArray(value.recommendations.results)) {
+    const records = value.recommendations.results
+    const results = records.flatMap((record: unknown) => {
+      try { return [parseMovie(record)] } catch { return [] }
+    })
+    recommendations = { page: value.recommendations.page, results }
+    if (results.length !== records.length)
+      metadataWarnings.push('Một số phim gợi ý có dữ liệu không hợp lệ và đã được bỏ qua.')
+  } else metadataWarnings.push('Chưa thể tải danh sách phim gợi ý.')
   return {
     ...movie,
     genres,
@@ -219,7 +234,8 @@ export function parseMovieDetails(value: unknown): TmdbMovieDetails {
       name: country.name,
     })),
     videos: { results: videos },
-    recommendations: parseMoviePage(value.recommendations),
+    recommendations,
+    metadataWarnings,
     credits: parseCredits(value.credits),
   }
 }
@@ -229,25 +245,29 @@ async function requestJson(
   signal?: AbortSignal,
 ): Promise<unknown> {
   try {
-    const response = await fetch(path, {
-      signal,
-      headers: { Accept: 'application/json' },
-    })
-    const body: unknown = await response.json().catch(() => null)
-    if (!response.ok) {
-      const error = isRecord(body) && isRecord(body.error) ? body.error : null
-      throw new ApiError(
-        typeof error?.message === 'string' && error.message.trim()
-          ? error.message
-          : 'Không thể tải phim. Vui lòng thử lại.',
-        response.status,
-        typeof error?.code === 'string' ? error.code : 'HTTP_ERROR',
-      )
-    }
-    if (body === null) return invalidData()
-    return body
+    return await withRequestDeadline(async (requestSignal) => {
+      const response = await fetch(path, {
+        signal: requestSignal,
+        headers: { Accept: 'application/json' },
+      })
+      const body: unknown = await response.json().catch(() => null)
+      if (!response.ok) {
+        const error = isRecord(body) && isRecord(body.error) ? body.error : null
+        throw new ApiError(
+          typeof error?.message === 'string' && error.message.trim()
+            ? error.message
+            : 'Không thể tải phim. Vui lòng thử lại.',
+          response.status,
+          typeof error?.code === 'string' ? error.code : 'HTTP_ERROR',
+        )
+      }
+      if (body === null) return invalidData()
+      return body
+    }, signal)
   } catch (error) {
     if (signal?.aborted || error instanceof ApiError) throw error
+    if (error instanceof DOMException && error.name === 'TimeoutError')
+      throw new ApiError('Máy chủ phản hồi quá lâu. Vui lòng thử lại.', null, 'REQUEST_TIMEOUT')
     throw new ApiError(
       'Không thể kết nối máy chủ. Kiểm tra mạng và thử lại.',
       null,

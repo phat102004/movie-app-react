@@ -9,7 +9,7 @@ export function readDisplayName(value) {
       characters.length <= 100 &&
       !characters.some((character) => {
         const code = character.codePointAt(0)
-        return code < 32 || code === 127
+        return code < 32 || (code >= 127 && code <= 159)
       }),
   }
 }

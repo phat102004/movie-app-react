@@ -2,6 +2,7 @@ import { HeroBanner } from '../components/HeroBanner'
 import { MovieList } from '../components/MovieList'
 import { MovieFilters } from '../components/MovieFilters'
 import { MovieDataState } from '../components/MovieDataState'
+import { MovieLoadNotice } from '../components/MovieLoadNotice'
 import { defaultMovieFilters, getFilterOptions } from '../data/movieFilters'
 import type { MovieFilterValues } from '../types/movieFilters'
 import type { useMovies } from '../hooks/useMovies'
@@ -37,14 +38,17 @@ export function HomePage({
 
   return (
     <div aria-busy={isLoading}>
-      {isLoading || error || movies.length === 0 ? (
+      {movies.length === 0 ? (
         <MovieDataState
-          status={isLoading ? 'loading' : error ? 'error' : 'empty'}
-          message={error ?? undefined}
+          status={isLoading ? 'loading' : error || catalog.partialErrors.length ? 'error' : 'empty'}
+          message={error ?? (catalog.partialErrors.length ? catalog.partialErrors.join(' ') : undefined)}
           onRetry={retry}
         />
       ) : (
         <>
+          <div className="page-container">
+            <MovieLoadNotice messages={catalog.partialErrors} onRetry={retry} busy={isLoading} />
+          </div>
           <HeroBanner key={heroMovie.id} movie={heroMovie} />
           <div id="featured" className="movie-collections page-container">
             <MovieFilters

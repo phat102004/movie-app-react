@@ -13,6 +13,8 @@
     "lint": "node frontend/node_modules/oxlint/bin/oxlint -c frontend/.oxlintrc.json frontend backend scripts",
     "build": "npm --prefix frontend run build",
     "test": "node --test backend/tests/*.test.mjs && npm --prefix frontend test",
+    "test:browser": "node scripts/test-browser.mjs",
+    "check": "npm run test && npm run lint && npm run typecheck && npm run build && npm run db:validate && npm run test:browser",
     "db:validate": "prisma validate --config backend/prisma.config.mjs",
     "db:generate": "prisma generate --config backend/prisma.config.mjs",
     "db:migrate:create": "prisma migrate diff --config backend/prisma.config.mjs --from-schema backend/prisma/baselines/password-reset.prisma --to-schema backend/prisma/schema.prisma --script",
@@ -32,6 +34,7 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.4.3",
+    "playwright": "1.64.1",
     "prisma": "7.10.1"
   }
 }

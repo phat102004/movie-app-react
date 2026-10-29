@@ -222,12 +222,40 @@ StrictMode được giữ trong main.tsx. Trong development có thể thấy req
 
 ## Các lệnh kiểm tra
 
+Quality gate cập nhật ở [Phase 7B.5](docs/phase-7b5-audit-remediation.md).
+Node >= 22.18; từ root, cài dependencies và tạo Prisma Client trước lần chạy đầu:
+
+```powershell
+npm.cmd ci
+npm.cmd --prefix frontend ci
+npm.cmd run db:generate
+npx.cmd playwright install chromium
+```
+
+Browser runner mặc định dùng Edge có sẵn trên Windows, Chromium trên hệ điều hành
+khác. Muốn dùng Chromium đã cài trên Windows: đặt
+`$env:CINEVERSE_BROWSER_CHANNEL = 'chromium'`. Linux CI cần
+`npx playwright install --with-deps chromium`. Không cần token TMDB, SMTP hoặc DB
+thật cho automated/browser fixtures. Generate client không áp dụng migration.
+
 ```powershell
 npm.cmd test
 npm.cmd run lint
 npm.cmd run typecheck
 npm.cmd run build
+npm.cmd run db:validate
+npm.cmd run test:browser
+# Hoặc chạy toàn bộ quality gate trên:
+npm.cmd run check
+# Chỉ đọc PostgreSQL local đã cấu hình; không nằm trong gate portable:
+npm.cmd run db:check
 ```
+
+`npm test` gồm backend/frontend unit và integration RAM, bao gồm Prisma service
+rollback. `test:browser` chạy Auth/Recovery, Movie Details/compact/cast,
+Auth layout, Favorites, Profile, Change Password, multi-tab và audit remediation.
+Runner dừng với exit code khác 0 khi một suite lỗi; không tự bỏ qua browser bị thiếu.
+Chưa có CI workflow hoặc PostgreSQL native nhiều kết nối trong gate này.
 
 Có thể chạy riêng bằng npm.cmd run dev:proxy và npm.cmd run dev:frontend từ thư mục gốc trong hai terminal. Trong thư mục frontend, npm.cmd run dev:only chỉ mở Vite và cần proxy đang chạy riêng. Production preview của Vite cũng proxy /api tới cổng 3001; cần chạy proxy riêng khi dùng preview. Chưa triển khai hosting trong bước này.
 

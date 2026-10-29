@@ -1,4 +1,4 @@
-// Khớp backend/auth/name-validation.mjs: trim, Unicode code points, C0/DEL.
+// Khớp backend/auth/name-validation.mjs: trim, Unicode code points, C0/DEL/C1.
 export function validateProfileName(value: unknown) {
   const name = typeof value === 'string' ? value.trim() : ''
   const characters = Array.from(name)
@@ -7,7 +7,7 @@ export function validateProfileName(value: unknown) {
     characters.length <= 100 &&
     !characters.some((character) => {
       const code = character.codePointAt(0)!
-      return code < 32 || code === 127
+      return code < 32 || (code >= 127 && code <= 159)
     })
   return {
     name,

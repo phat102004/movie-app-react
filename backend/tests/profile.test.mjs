@@ -187,6 +187,22 @@ async function fixture(t, profile = {}) {
   }
 }
 
+test('L01: HTTP Register and authenticated PATCH reject C1 without creating or updating a user', async t => {
+  const f = await fixture(t)
+  const cookie = await f.login()
+  const before = f.client.users.length
+  const name = 'A\u009fB'
+  const registration = await authRequest(f.base, 'register', {
+    body: { name, email: 'new@fixture.test', password },
+  })
+  assert.equal(registration.response.status, 400)
+  const patch = await f.request({ method: 'PATCH', cookie, body: { name } })
+  assert.equal(patch.response.status, 400)
+  assert.equal(f.client.users.length, before)
+  assert.equal(f.client.users.find(row => row.id === userA).name, 'Fixture A')
+  assert.equal(f.client.calls.some(([name]) => name === 'user.update'), false)
+})
+
 function assertProfile(
   result,
   { id = userA, name = 'Fixture A', favoriteCount = 0 } = {},
