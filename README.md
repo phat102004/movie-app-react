@@ -222,6 +222,9 @@ StrictMode được giữ trong main.tsx. Trong development có thể thấy req
 
 ## Các lệnh kiểm tra
 
+CI và native PostgreSQL tests: [Phase 7C — CI & production readiness](docs/phase-7c-ci-production-readiness.md).
+Workflow chạy PR và push main, không deploy; Node CI được pin trong `.node-version`.
+
 Quality gate cập nhật ở [Phase 7B.5](docs/phase-7b5-audit-remediation.md).
 Node >= 22.18; từ root, cài dependencies và tạo Prisma Client trước lần chạy đầu:
 
@@ -255,7 +258,21 @@ npm.cmd run db:check
 rollback. `test:browser` chạy Auth/Recovery, Movie Details/compact/cast,
 Auth layout, Favorites, Profile, Change Password, multi-tab và audit remediation.
 Runner dừng với exit code khác 0 khi một suite lỗi; không tự bỏ qua browser bị thiếu.
-Chưa có CI workflow hoặc PostgreSQL native nhiều kết nối trong gate này.
+Native PostgreSQL nhiều kết nối được chạy bằng gate riêng của Phase 7C bên dưới.
+
+Phase 7C bổ sung workflow và gate native **riêng**, không chạy trên DATABASE_URL
+local/production. Trên máy có PostgreSQL 17 binaries, có thể kiểm tra bằng cluster
+mới được tự tạo ở cổng tạm rồi dừng lại:
+
+```powershell
+$env:CINEVERSE_PG_BIN = 'C:\Program Files\PostgreSQL\17\bin'
+npm.cmd run test:postgres:local
+```
+
+`npm run test:postgres` dành cho disposable service CI, bắt buộc opt-in/URL test
+riêng; thiếu cấu hình trả lỗi, không skip/fallback. Không điền các biến test này vào
+backend/.env. `check:production-config` là offline gate cho env production được
+inject riêng, không kết nối database/deploy và không thuộc `npm run check` portable.
 
 Có thể chạy riêng bằng npm.cmd run dev:proxy và npm.cmd run dev:frontend từ thư mục gốc trong hai terminal. Trong thư mục frontend, npm.cmd run dev:only chỉ mở Vite và cần proxy đang chạy riêng. Production preview của Vite cũng proxy /api tới cổng 3001; cần chạy proxy riêng khi dùng preview. Chưa triển khai hosting trong bước này.
 

@@ -1,0 +1,89 @@
+name: Cineverse CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Quality and browser regression
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      CINEVERSE_BROWSER_CHANNEL: chromium
+      DATABASE_URL: ''
+      MIGRATION_DATABASE_URL: ''
+      TMDB_READ_ACCESS_TOKEN: ''
+      SMTP_USER: ''
+      SMTP_PASSWORD: ''
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - name: Install from both lockfiles
+        run: |
+          npm ci
+          npm --prefix frontend ci
+      - name: Generate Prisma Client without database credentials
+        run: npm run db:generate
+      - name: Validate workflow (pinned actionlint binary)
+        run: |
+          curl --fail --silent --show-error --location https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz -o "$RUNNER_TEMP/actionlint.tar.gz"
+          echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  $RUNNER_TEMP/actionlint.tar.gz" | sha256sum --check -
+          tar -xzf "$RUNNER_TEMP/actionlint.tar.gz" -C "$RUNNER_TEMP" actionlint
+          "$RUNNER_TEMP/actionlint" .github/workflows/ci.yml
+      - name: Install browser and OS dependencies
+        run: npx --no-install playwright install --with-deps chromium
+      - name: Unit, integration RAM, lint, TypeScript, build, schema and browser gates
+        run: npm run check
+
+  postgres-native:
+    name: PostgreSQL 17 native concurrency and least privilege
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17.11-bookworm@sha256:839fbb5a4942a7758dd93e18b42ea5649807491a0545b5eeeb8f0b8bb11857a5
+        env:
+          # Public synthetic credentials for this disposable service ONLY.
+          POSTGRES_USER: cineverse_ci_bootstrap
+          POSTGRES_PASSWORD: ci-ephemeral-bootstrap-fixture-only
+          POSTGRES_DB: cineverse_ci
+          POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256 --auth-local=scram-sha-256 --set=cluster_name=cineverse_native_disposable
+        ports:
+          - 5432/tcp
+        options: >-
+          --health-cmd "pg_isready -U cineverse_ci_bootstrap -d cineverse_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - run: npm ci
+      - run: npm run db:generate
+      - name: Migrate isolated DB and test real connections as runtime role
+        env:
+          CINEVERSE_NATIVE_TESTS: allow-isolated-native-tests
+          CINEVERSE_CI_SERVER_PORT: '5432'
+          CINEVERSE_CI_DATABASE_URL: postgresql://cineverse_ci_bootstrap:ci-ephemeral-bootstrap-fixture-only@127.0.0.1:${{ job.services.postgres.ports['5432'] }}/cineverse_ci
+          DATABASE_URL: ''
+          MIGRATION_DATABASE_URL: ''
+        run: npm run test:postgres
