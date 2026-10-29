@@ -1,7 +1,8 @@
 # Phase 7C — CI & production readiness
 
-Ngày thực hiện: **29/10/2026**, baseline `8963813`. Không deploy, push, tạo release,
-reset PostgreSQL hoặc sửa credentials thật. Tài liệu 7A/7B là snapshot lịch sử;
+Ngày thực hiện: **29/10/2026**, baseline `8963813`. Không deploy, tạo release,
+reset PostgreSQL hoặc sửa credentials thật. Commit/push được thực hiện theo yêu cầu
+publication riêng; bằng chứng GitHub Actions ở mục 8. Tài liệu 7A/7B là snapshot lịch sử;
 đọc trạng thái M04 hiện tại ở mục 8 bên dưới.
 
 ## 1. Kiến trúc CI
@@ -183,8 +184,9 @@ Snapshot có Git root riêng để không kế thừa ignore rule của repo cha
 Sau đó chạy lại quality gate và native test trên snapshot này. Mọi helper phục vụ
 CI nằm trong source repository (`scripts/`, `backend/integration/`), không tham chiếu
 đường dẫn `.npm-cache` để lấy fixture/dependency. Cache chỉ chứa kết quả local/probes.
-Files Phase 7C cần được commit/push theo một tác vụ được cho phép riêng trước khi
-workflow có thể được GitHub-hosted runner thực thi.
+Files Phase 7C đã được commit/push theo tác vụ được cho phép riêng. GitHub-hosted
+runner đã checkout source từ commit, cài dependencies và chạy thành công cả hai
+jobs; xem SHA và run URL ở mục 8. Probe export local không thay cho bằng chứng này.
 
 ## 6. Production configuration checklist
 
@@ -217,14 +219,14 @@ tự chạy db:roles:check, migrations hoặc kiểm tra mạng để tránh hà
 | npm ci root + frontend | Pass: 165 + 30 packages, npm config riêng/rỗng và public registry | Không dùng node_modules của checkout gốc, không đổi hai lockfiles |
 | Prisma generate | Pass, Client 7.10.1 sinh mới trong snapshot | Không migrate database developer |
 | npm run check trong snapshot | Pass, Node **22.23.4** | Cùng runtime pin CI; môi trường Windows local, chưa Ubuntu GitHub-hosted |
-| Automated tests | **395/395**: backend 286 + frontend 109; 0 fail/skip/cancel | Thêm 6 config/guard tests so với 389 ở Phase 7B.5, gồm published/internal port regression |
+| Automated tests | **396/396**: backend 287 + frontend 109; 0 fail/skip/cancel | Thêm 6 config/guard tests và 1 diagnostic redaction test so với 389 ở Phase 7B.5 |
 | Native PostgreSQL clean snapshot | **14/14 Node TAP tests**: 13 scenarios + 1 parent; 0 fail/skip/cancel | PostgreSQL 17.11 private cluster, actual PrismaPg, nhiều connections; thêm ngoài portable 394 tests |
-| Browser regression | Pass toàn bộ runner hiện hữu | Edge headless; Auth/Recovery/Movies/compact/cast/layout/Favorites/Profile/Password, 22 multi-tab và 8 remediation checkpoints |
+| Browser regression | Pass toàn bộ runner hiện hữu | Edge local và Chromium Linux trên GitHub; Auth/Recovery/Movies/compact/cast/layout/Favorites/Profile/Password, 22 multi-tab và 8 remediation checkpoints |
 | Lint, TypeScript, production build, schema | Pass | Oxlint không warning; Vite 8.3.4, 97 modules, JS 357.79 kB / gzip 109.16 kB |
-| Workflow static validation | Pass actionlint 1.7.12 | Windows local không có ShellCheck, dùng -shellcheck=; workflow Linux vẫn bật kiểm tra shell mặc định |
+| Workflow validation | Pass actionlint 1.7.12 local và bước validation trên GitHub | Windows local không có ShellCheck, dùng -shellcheck=; workflow Linux bật kiểm tra shell mặc định và đã đạt |
 | Local db:check và metadata/checksum | Pass chỉ đọc | PostgreSQL 17.11 cineverse_dev, 4 migrations/Favorite constraints giữ nguyên; local runtime vẫn SUPERUSER, không gọi là production least privilege |
 | Secret review | Không phát hiện real credentials trong 275 working files/index/history local được quét | URL dựng từ constants disposable được review riêng; không sửa scanner để bỏ qua credentials thật |
-| GitHub Actions run | **CHƯA CHẠY** | Workflow mới chưa commit/push; không tuyên bố CI pass hoặc Docker service Linux đã được thực thi |
+| GitHub Actions run | **SUCCESS**, cả quality/browser và postgres-native | Run `40865549185`, SHA `70809412a21ce81a98d3bbabeb09c8ecdca7eb9e`; Ubuntu 24.04, Chromium Linux và Docker PostgreSQL thực |
 
 Native migration thử đầu thiếu `schema=public` đã fail đúng quyền schema; sau khi
 sửa test URL, deploy/history/drift và service tests đều đạt. Clean gate thử đầu bị
@@ -242,18 +244,42 @@ Không gọi workflow là CI pass chỉ vì YAML hợp lệ hoặc local tests �
 
 ## 8. M04 và việc phải xác nhận trên GitHub
 
-**M04 vẫn open cho đến khi có GitHub Actions run hoàn tất thành công.** Phase này
-thêm workflow và bằng chứng local native/clean install; chưa tự push hoặc chạy
-GitHub-hosted runner. Không thay lịch sử audit matrix 7B.5 thành “resolved”.
+**M04 đủ điều kiện đóng trong phạm vi CI/clean checkout/native multi-connection.**
+Bằng chứng đã xác minh qua GitHub API và logs, không chỉ YAML hoặc kết quả local:
 
-Sau khi được phép commit/push hoặc mở PR:
+- Commit triển khai: `1184f5aa667767c72e06991b2a8308ddc170f2e9`, message
+  `ci: add GitHub Actions and PostgreSQL integration tests`.
+- Commit diagnostic an toàn: `70809412a21ce81a98d3bbabeb09c8ecdca7eb9e`.
+- [Run thành công 40865549185](https://github.com/phat102004/movie-app-react/actions/runs/40865549185):
+  `Quality and browser regression` **success**; `PostgreSQL 17 native concurrency
+  and least privilege` **success**, không skip gate bắt buộc.
+- Main-push workflow đã chạy thực tế từ checkout mới; PR trigger/permissions được
+  review trong YAML, chưa tạo một fork PR riêng để kiểm tra trigger đó.
+- Nếu cập nhật trạng thái audit hiện tại: **6 resolved / 4 mitigated / 0 open**
+  cho 10 findings gốc. Giữ nguyên tài liệu 7A/7B.5 làm lịch sử; không đổi H02/H03/H04
+  thành production-verified chỉ vì CI xanh.
+
+**Failure được giữ làm bằng chứng và rủi ro còn lại:**
+[Run đầu 40863988286](https://github.com/phat102004/movie-app-react/actions/runs/40863988286)
+qua native job nhưng quality fail tại `auth.browser.cjs`. Script cũ che cả vị trí
+lỗi nên chưa đủ dữ liệu kết luận nguyên nhân assertion/timeout cụ thể. Thêm safe
+diagnostic chỉ in loại lỗi và source locations, có test redaction; không đổi hoặc
+bỏ assertion, không giảm bảo mật. Run tiếp theo thành công đầy đủ. Không tuyên bố
+đã tìm/sửa nguyên nhân gốc của failure đầu hoặc browser suite không còn flaky.
+Nếu tái diễn, dùng source locations mới để phân tích trước khi sửa. Đây là residual
+reliability risk cần theo dõi, tách khỏi thiếu quality gate vốn là M04.
+
+Trong lượt local bổ sung, tải Chromium Windows bị timeout; không gọi đây là local
+Chromium pass. Edge local và Chromium trên GitHub là hai bằng chứng thực tế đã có.
+
+Đối với các commit/PR tiếp theo:
 
 1. Vào repository → Actions → **Cineverse CI**, chọn đúng commit SHA/PR revision.
 2. Cả hai jobs phải xanh, không cancelled/skipped; kiểm tra Node pin, PostgreSQL
    service health, migration/history/drift, native test counts và browser checkpoints.
 3. Xem logs không có DSN/token/cookie/private data; không upload artifacts nhạy cảm.
 4. Xác nhận PR từ fork chạy read-only, không dùng secrets; reviewer xem changes workflow
-   trước merge. Sau bằng chứng này mới review đóng M04, không tự động đóng từ YAML.
+   trước merge. Không coi YAML tồn tại hoặc một suite bị skip là bằng chứng gate đạt.
 5. Owner có thể đặt cả hai jobs thành required status checks trong branch protection;
    repo settings chưa bị sửa trong Phase này.
 
@@ -278,10 +304,13 @@ Tạo `.github/workflows/ci.yml`, `.node-version`, `backend/integration/{config,
 prisma.config,fixture,native.test}.mjs`, `backend/production-readiness.mjs`,
 `backend/tests/ci-safety.test.mjs`, `scripts/{test-postgres,test-postgres-local,
 check-production-config}.mjs` và tài liệu này. Sửa scripts root package.json/README.
+Lượt xử lý CI bổ sung `frontend/tests/browser-diagnostics.cjs`,
+`backend/tests/browser-diagnostics.test.mjs`, cập nhật catch của `auth.browser.cjs`
+và `scripts/test-browser.mjs` để truyền vị trí lỗi đã lọc. Không log message/giá trị form.
 Không đổi dependency versions/lockfile, schema/migrations, auth behavior hoặc React UI.
 
-Native PostgreSQL trên Windows không thay cho service container Linux/GitHub run;
-Edge local không chứng minh Chromium Linux; chưa xác minh TLS/SMTP/upstream/ingress
+Native PostgreSQL Windows và service container Linux/GitHub đều đã có kết quả;
+Edge local và Chromium Linux đều đã chạy. Chưa xác minh TLS/SMTP/upstream/ingress
 production, backup/restore, monitoring, rollout/rollback hoặc distributed quota.
 H02/H03/H04 vẫn cần staging/production evidence theo Phase 7B.5. Không deploy trong 7C.
 
