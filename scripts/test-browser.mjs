@@ -18,9 +18,12 @@ for (const [suite, ...args] of suites) {
       timeout: 240_000, maxBuffer: 1024 * 1024,
     })
     process.stdout.write(stdout)
-  } catch {
+  } catch (error) {
     // Browser errors may contain form values/reset URLs. Do not dump raw errors.
     console.error(`Browser suite failed: ${suite}. Sensitive details hidden.`)
+    for (const line of String(error.stderr ?? '').split('\n'))
+      if (/^SAFE_BROWSER_FAILURE [A-Za-z0-9_-]+\.browser\.cjs: (AssertionError|TimeoutError|TypeError|RangeError|Error|Unknown); locations=[A-Za-z0-9_.:,-]+$/.test(line.trim()))
+        console.error(line.trim())
     process.exitCode = 1
     break
   }

@@ -850,8 +850,8 @@ async function recoveryTests(browser, base, database, mails) {
   }
 }
 
-main().catch(() => {
+main().catch((error) => {
   // Playwright có thể đính kèm reset URL hoặc giá trị input vào lỗi.
-  console.error('Auth browser verification failed; sensitive details hidden.')
+  console.error(require('./browser-diagnostics.cjs').safeBrowserFailure('auth.browser.cjs', error))
   process.exitCode = 1
 })
