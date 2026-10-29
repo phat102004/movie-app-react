@@ -276,6 +276,18 @@ inject riêng, không kết nối database/deploy và không thuộc `npm run ch
 
 Có thể chạy riêng bằng npm.cmd run dev:proxy và npm.cmd run dev:frontend từ thư mục gốc trong hai terminal. Trong thư mục frontend, npm.cmd run dev:only chỉ mở Vite và cần proxy đang chạy riêng. Production preview của Vite cũng proxy /api tới cổng 3001; cần chạy proxy riêng khi dùng preview. Chưa triển khai hosting trong bước này.
 
+Đo performance trên production build (API fixtures, không dùng database/token):
+
+```powershell
+npm.cmd run build
+# Chỉ lần đầu: tải 7 ảnh TMDB công khai vào cache local.
+npm.cmd run perf:measure -- --prepare-images
+npm.cmd run perf:measure -- --output .npm-cache/phase-8a/measurement.json
+```
+
+Cần browser Playwright hoặc Edge trên Windows. Số liệu, điều kiện lab, tradeoff
+và cách so sánh baseline: [Phase 8A — Performance](docs/phase-8a-performance-optimization.md).
+
 ## Tài liệu và thứ tự học
 
 1. [API types](frontend/src/types/tmdb.ts) và [API service](frontend/src/services/tmdb.ts): fetch, response.ok, JSON, lỗi và runtime validation.

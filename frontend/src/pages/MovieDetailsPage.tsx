@@ -9,6 +9,7 @@ import { MovieLoadNotice } from '../components/MovieLoadNotice'
 import { FavoriteButton } from '../components/FavoriteButton'
 import { useMovieDetails } from '../hooks/useMovieDetails'
 import { isValidMovieId } from '../utils/movieId'
+import { tmdbImageSrcSet } from '../utils/responsiveImage'
 import { NotFoundPage } from './NotFoundPage'
 import './MovieDetailsPage.css'
 
@@ -40,6 +41,8 @@ function DetailsImage({
   ) : (
     <img
       src={src}
+      srcSet={tmdbImageSrcSet(src, backdrop ? 'backdrop' : 'poster')}
+      sizes={backdrop ? 'auto, (max-width: 760px) 100vw, 50vw' : '(max-width: 380px) 80px, (max-width: 760px) 110px, 220px'}
       alt={`${backdrop ? 'Khung hình từ' : 'Poster'} ${title}`}
       width={backdrop ? 1280 : 500}
       height={backdrop ? 720 : 750}

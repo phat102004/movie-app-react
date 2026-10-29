@@ -1,25 +1,42 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { Route, Routes, useLocation, useNavigate } from 'react-router'
 import { Header } from './components/Header'
 import { RouteFocus } from './components/RouteFocus'
 import { TmdbAttribution } from './components/TmdbAttribution'
 import { HomePage } from './pages/HomePage'
-import { MovieDetailsPage } from './pages/MovieDetailsPage'
 import { NotFoundPage } from './pages/NotFoundPage'
-import { LoginPage } from './pages/LoginPage'
-import { RegisterPage } from './pages/RegisterPage'
-import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
-import { ResetPasswordPage } from './pages/ResetPasswordPage'
+import { RouteBoundary, RouteLoading } from './components/RouteBoundary'
 import { clearResetToken } from './utils/resetToken'
 import { AuthSessionNotice } from './components/AuthSessionNotice'
 import { FavoritesNotice } from './components/FavoritesNotice'
-import { FavoritesPage } from './pages/FavoritesPage'
-import { ProfilePage } from './pages/ProfilePage'
 import { defaultMovieFilters } from './data/movieFilters'
 import { useMovies } from './hooks/useMovies'
 import type { MovieFilterValues } from './types/movieFilters'
 import { useAuth } from './hooks/useAuth'
 import { hasPasswordChangedNotice } from './utils/passwordChangeForm'
+
+// Declare lazy modules once, outside render, so state isn't reset on re-render.
+const MovieDetailsPage = lazy(() =>
+  import('./pages/MovieDetailsPage').then(module => ({ default: module.MovieDetailsPage })),
+)
+const FavoritesPage = lazy(() =>
+  import('./pages/FavoritesPage').then(module => ({ default: module.FavoritesPage })),
+)
+const ProfilePage = lazy(() =>
+  import('./pages/ProfilePage').then(module => ({ default: module.ProfilePage })),
+)
+const LoginPage = lazy(() =>
+  import('./pages/LoginPage').then(module => ({ default: module.LoginPage })),
+)
+const RegisterPage = lazy(() =>
+  import('./pages/RegisterPage').then(module => ({ default: module.RegisterPage })),
+)
+const ForgotPasswordPage = lazy(() =>
+  import('./pages/ForgotPasswordPage').then(module => ({ default: module.ForgotPasswordPage })),
+)
+const ResetPasswordPage = lazy(() =>
+  import('./pages/ResetPasswordPage').then(module => ({ default: module.ResetPasswordPage })),
+)
 
 function App() {
   const { pathname, key, state } = useLocation()
@@ -76,31 +93,35 @@ function App() {
         className={isAuthPage ? 'auth-main' : undefined}
         tabIndex={-1}
       >
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <HomePage
-                catalog={catalog}
-                searchQuery={searchQuery}
-                filters={filters}
-                onFiltersChange={setFilters}
-                onReset={resetFilters}
+        <RouteBoundary key={pathname}>
+          <Suspense fallback={<RouteLoading />}>
+            <Routes>
+              <Route
+                path="/"
+                element={
+                  <HomePage
+                    catalog={catalog}
+                    searchQuery={searchQuery}
+                    filters={filters}
+                    onFiltersChange={setFilters}
+                    onReset={resetFilters}
+                  />
+                }
               />
-            }
-          />
-          <Route path="/movies/:movieId" element={<MovieDetailsPage />} />
-          <Route path="/favorites" element={<FavoritesPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route
-            path="/reset-password"
-            element={<ResetPasswordPage key={key} />}
-          />
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
+              <Route path="/movies/:movieId" element={<MovieDetailsPage />} />
+              <Route path="/favorites" element={<FavoritesPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route
+                path="/reset-password"
+                element={<ResetPasswordPage key={key} />}
+              />
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </Suspense>
+        </RouteBoundary>
       </main>
       <footer className="site-footer page-container">
         <span className="footer-brand">

@@ -14,6 +14,7 @@
     "build": "npm --prefix frontend run build",
     "test": "node --test backend/tests/*.test.mjs && npm --prefix frontend test",
     "test:browser": "node scripts/test-browser.mjs",
+    "perf:measure": "node scripts/measure-performance.mjs",
     "test:postgres": "node scripts/test-postgres.mjs",
     "test:postgres:local": "node scripts/test-postgres-local.mjs",
     "check:production-config": "node scripts/check-production-config.mjs",

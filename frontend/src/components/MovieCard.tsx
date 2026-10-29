@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import type { Movie } from '../types/movie'
 import { Icon } from './Icon'
 import { FavoriteButton } from './FavoriteButton'
+import { moviePosterSizes, tmdbImageSrcSet } from '../utils/responsiveImage'
 import './MovieCard.css'
 
 type MovieCardProps = {
@@ -28,6 +29,8 @@ export function MovieCard({ movie }: MovieCardProps) {
           ) : (
             <img
               src={movie.poster}
+              srcSet={tmdbImageSrcSet(movie.poster, 'poster')}
+              sizes={moviePosterSizes}
               alt={`Poster ${movie.title}`}
               width="500"
               height="750"

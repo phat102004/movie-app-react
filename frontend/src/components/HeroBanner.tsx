@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { Movie } from '../types/movie'
 import { Link } from 'react-router'
 import { Icon } from './Icon'
+import { heroImageSizes, tmdbImageSrcSet } from '../utils/responsiveImage'
 import './HeroBanner.css'
 
 type HeroBannerProps = {
@@ -24,6 +25,8 @@ export function HeroBanner({ movie }: HeroBannerProps) {
             <img
               className="hero-backdrop"
               src={image}
+              srcSet={tmdbImageSrcSet(image, movie.backdrop ? 'backdrop' : 'poster')}
+              sizes={heroImageSizes}
               alt={`Khung hình từ ${movie.title}`}
               width="1280"
               height="720"
