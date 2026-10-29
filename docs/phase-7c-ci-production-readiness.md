@@ -244,7 +244,8 @@ Không gọi workflow là CI pass chỉ vì YAML hợp lệ hoặc local tests �
 
 ## 8. M04 và việc phải xác nhận trên GitHub
 
-**M04 đủ điều kiện đóng trong phạm vi CI/clean checkout/native multi-connection.**
+**M04 đủ điều kiện đóng trong phạm vi CI/clean checkout/native multi-connection
+khi cả hai jobs của HEAD hiện tại đã được xác minh success.**
 Bằng chứng đã xác minh qua GitHub API và logs, không chỉ YAML hoặc kết quả local:
 
 - Commit triển khai: `1184f5aa667767c72e06991b2a8308ddc170f2e9`, message
@@ -255,7 +256,7 @@ Bằng chứng đã xác minh qua GitHub API và logs, không chỉ YAML hoặc 
   and least privilege` **success**, không skip gate bắt buộc.
 - Main-push workflow đã chạy thực tế từ checkout mới; PR trigger/permissions được
   review trong YAML, chưa tạo một fork PR riêng để kiểm tra trigger đó.
-- Nếu cập nhật trạng thái audit hiện tại: **6 resolved / 4 mitigated / 0 open**
+- Sau khi HEAD được xác minh, trạng thái audit có thể cập nhật thành **6 resolved / 4 mitigated / 0 open**
   cho 10 findings gốc. Giữ nguyên tài liệu 7A/7B.5 làm lịch sử; không đổi H02/H03/H04
   thành production-verified chỉ vì CI xanh.
 
@@ -265,9 +266,18 @@ qua native job nhưng quality fail tại `auth.browser.cjs`. Script cũ che cả
 lỗi nên chưa đủ dữ liệu kết luận nguyên nhân assertion/timeout cụ thể. Thêm safe
 diagnostic chỉ in loại lỗi và source locations, có test redaction; không đổi hoặc
 bỏ assertion, không giảm bảo mật. Run tiếp theo thành công đầy đủ. Không tuyên bố
-đã tìm/sửa nguyên nhân gốc của failure đầu hoặc browser suite không còn flaky.
-Nếu tái diễn, dùng source locations mới để phân tích trước khi sửa. Đây là residual
-reliability risk cần theo dõi, tách khỏi thiếu quality gate vốn là M04.
+đã tìm/sửa nguyên nhân gốc của failure Auth đầu hoặc browser suite không còn flaky.
+
+Các run `40866406276` và `40867051503` sau đó fail tại Profile. Diagnostic ở run
+[40867051503](https://github.com/phat102004/movie-app-react/actions/runs/40867051503)
+chỉ đúng `profile.browser.cjs:218`: test assert focus ngay khi input vừa visible,
+trong khi ProfilePage chủ động focus qua requestAnimationFrame. Đây là race của
+test với frame của ứng dụng. Bản sửa giữ assertion focus, chờ pseudo-class :focus,
+và thêm frame gate điều khiển: input visible vẫn chưa focus, thả callback của app
+rồi bắt buộc focus xuất hiện. Escape cũng chờ frame khôi phục focus; không tự
+focus thay app, không đổi UI hoặc vô hiệu hóa test. Run xanh của revision cũ không
+thay cho việc xác minh lại HEAD có bản sửa này. Failure Auth đầu vẫn là residual
+reliability risk chưa đủ dữ liệu kết luận nguyên nhân, cần theo dõi qua diagnostic.
 
 Trong lượt local bổ sung, tải Chromium Windows bị timeout; không gọi đây là local
 Chromium pass. Edge local và Chromium trên GitHub là hai bằng chứng thực tế đã có.
@@ -306,7 +316,8 @@ prisma.config,fixture,native.test}.mjs`, `backend/production-readiness.mjs`,
 check-production-config}.mjs` và tài liệu này. Sửa scripts root package.json/README.
 Lượt xử lý CI bổ sung `frontend/tests/browser-diagnostics.cjs`,
 `backend/tests/browser-diagnostics.test.mjs`, cập nhật catch của `auth.browser.cjs`
-và `scripts/test-browser.mjs` để truyền vị trí lỗi đã lọc. Không log message/giá trị form.
+và `scripts/test-browser.mjs` để truyền vị trí lỗi đã lọc. Sửa `profile.browser.cjs`
+để kiểm thử focus theo frame, có regression gate. Không log message/giá trị form.
 Không đổi dependency versions/lockfile, schema/migrations, auth behavior hoặc React UI.
 
 Native PostgreSQL Windows và service container Linux/GitHub đều đã có kết quả;

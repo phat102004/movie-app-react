@@ -212,9 +212,26 @@ async function main() {
     assert.equal(await page.locator('.account-panel').count(), 0)
     const edit = () =>
       page.getByRole('button', { name: 'Chỉnh sửa hồ sơ', exact: true })
+    // Hold the application's next focus frame: visibility alone does not mean
+    // its requestAnimationFrame callback has run (observed on Chromium/Linux).
+    await page.evaluate(() => {
+      const frame = window.requestAnimationFrame.bind(window)
+      window.requestAnimationFrame = (callback) => {
+        window.requestAnimationFrame = frame
+        window.__resumeProfileFocusFrame = () => frame(callback)
+        return 0
+      }
+    })
     await edit().click()
     const input = page.getByLabel('Tên hiển thị', { exact: true })
     await input.waitFor()
+    assert.equal(await input.evaluate((element) => element === document.activeElement), false)
+    await page.evaluate(() => {
+      const resume = window.__resumeProfileFocusFrame
+      delete window.__resumeProfileFocusFrame
+      resume()
+    })
+    await page.locator('#profile-name:focus').waitFor()
     assert.equal(
       await input.evaluate((element) => element === document.activeElement),
       true,
@@ -311,6 +328,7 @@ async function main() {
     await page.unroute('**/api/profile')
     await input.press('Escape')
     await edit().waitFor()
+    await page.locator('.profile-account-heading .profile-secondary-button:focus').waitFor()
     assert.equal(
       await edit().evaluate((element) => element === document.activeElement),
       true,
