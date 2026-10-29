@@ -21,9 +21,14 @@ for (const [suite, ...args] of suites) {
   } catch (error) {
     // Browser errors may contain form values/reset URLs. Do not dump raw errors.
     console.error(`Browser suite failed: ${suite}. Sensitive details hidden.`)
+    let reported = false
     for (const line of String(error.stderr ?? '').split('\n'))
-      if (/^SAFE_BROWSER_FAILURE [A-Za-z0-9_-]+\.browser\.cjs: (AssertionError|TimeoutError|TypeError|RangeError|Error|Unknown); locations=[A-Za-z0-9_.:,-]+$/.test(line.trim()))
+      if (/^SAFE_BROWSER_FAILURE [A-Za-z0-9_-]+\.browser\.cjs: (AssertionError|TimeoutError|TypeError|RangeError|Error|Unknown); locations=[A-Za-z0-9_.:,-]+$/.test(line.trim())) {
         console.error(line.trim())
+        reported = true
+      }
+    if (!reported)
+      console.error(require('../frontend/tests/browser-diagnostics.cjs').safeBrowserFailure(suite, error))
     process.exitCode = 1
     break
   }
