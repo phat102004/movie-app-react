@@ -90,6 +90,7 @@ export function MovieDetailsPage() {
         aria-busy="true"
         aria-label="Đang tải chi tiết phim"
       >
+        <h1 className="visually-hidden">Đang tải chi tiết phim</h1>
         <p role="status">Đang tải chi tiết phim từ TMDB…</p>
         <div className="details-intro" aria-hidden="true">
           <div className="skeleton details-poster" />

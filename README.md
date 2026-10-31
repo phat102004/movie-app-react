@@ -288,6 +288,17 @@ npm.cmd run perf:measure -- --output .npm-cache/phase-8a/measurement.json
 Cần browser Playwright hoặc Edge trên Windows. Số liệu, điều kiện lab, tradeoff
 và cách so sánh baseline: [Phase 8A — Performance](docs/phase-8a-performance-optimization.md).
 
+Kiểm tra responsive/accessibility trên production build:
+
+```powershell
+npm.cmd run build
+npm.cmd run test:a11y
+```
+
+Suite dùng axe-core (dev-only), API fixtures và keyboard thật qua Playwright tại
+320/375/768/1024/1440px; đã tích hợp vào `test:browser` và `check`.
+Giới hạn kiểm thử và bằng chứng: [Phase 8B — Responsive & accessibility](docs/phase-8b-responsive-accessibility.md).
+
 ## Tài liệu và thứ tự học
 
 1. [API types](frontend/src/types/tmdb.ts) và [API service](frontend/src/services/tmdb.ts): fetch, response.ok, JSON, lỗi và runtime validation.

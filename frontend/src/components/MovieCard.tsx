@@ -18,7 +18,6 @@ export function MovieCard({ movie }: MovieCardProps) {
       <Link
         className="movie-card-link"
         to={`/movies/${movie.id}`}
-        aria-label={`Chi tiết ${movie.title}`}
       >
         <div className="movie-poster">
           {imageFailed || !movie.poster ? (

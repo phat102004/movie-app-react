@@ -55,7 +55,7 @@
   font: 400 clamp(28px, 3vw, 42px)/1 var(--font-editorial);
 }
 .cast-photo-fallback small {
-  color: var(--muted);
+  color: var(--accent-strong);
   font-size: 11px;
 }
 .cast-card h3 {

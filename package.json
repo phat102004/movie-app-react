@@ -14,6 +14,7 @@
     "build": "npm --prefix frontend run build",
     "test": "node --test backend/tests/*.test.mjs && npm --prefix frontend test",
     "test:browser": "node scripts/test-browser.mjs",
+    "test:a11y": "node frontend/tests/accessibility.browser.cjs",
     "perf:measure": "node scripts/measure-performance.mjs",
     "test:postgres": "node scripts/test-postgres.mjs",
     "test:postgres:local": "node scripts/test-postgres-local.mjs",
@@ -38,6 +39,7 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.4.3",
+    "axe-core": "4.14.0",
     "playwright": "1.64.1",
     "prisma": "7.10.1"
   }

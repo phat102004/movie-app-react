@@ -8,7 +8,7 @@ const playwright = require.resolve('playwright')
 const suites = [
   ['auth.browser.cjs', '--regression'], ['authLayout.browser.cjs'],
   ['favorites.browser.cjs'], ['profile.browser.cjs'], ['changePassword.browser.cjs'],
-  ['multitabAuth.browser.cjs'], ['auditRemediation.browser.cjs'],
+  ['multitabAuth.browser.cjs'], ['auditRemediation.browser.cjs'], ['accessibility.browser.cjs'],
 ]
 for (const [suite, ...args] of suites) {
   console.info(`Browser regression: ${suite}`)

@@ -8,6 +8,7 @@
   --accent-soft: #edf0e8;
   --border: #e5e3dc;
   --border-strong: #cccac0;
+  --control-border: #898a80;
   --page-gutter: clamp(20px, 4.5vw, 72px);
   --font-body: 'Segoe UI', Arial, sans-serif;
   --font-editorial: Cambria, 'Times New Roman', serif;
@@ -112,6 +113,17 @@ select:focus-visible {
 }
 .skip-link:focus {
   transform: translateY(0);
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 .site-footer {
   display: flex;

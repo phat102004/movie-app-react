@@ -114,16 +114,16 @@ export function AccountMenu() {
         aria-controls="account-panel"
         onClick={() => setOpenUserId(open ? null : user.id)}
       >
-        <span className="auth-avatar" aria-hidden="true">
-          {Array.from(user.name.trim())[0]?.toLocaleUpperCase('vi') ?? 'C'}
-        </span>
+        <span
+          className="auth-avatar"
+          aria-hidden="true"
+          data-initial={Array.from(user.name.trim())[0]?.toLocaleUpperCase('vi') ?? 'C'}
+        />
         <span className="account-name">{user.name}</span>
-        <span className="account-chevron" aria-hidden="true">
-          ⌄
-        </span>
+        <span className="account-chevron" aria-hidden="true" />
       </button>
       {open && (
-        <div
+        <nav
           className="account-panel"
           id="account-panel"
           aria-label="Tài khoản"
@@ -150,7 +150,7 @@ export function AccountMenu() {
           >
             {isSigningOut ? 'Đang đăng xuất…' : 'Đăng xuất'}
           </button>
-        </div>
+        </nav>
       )}
     </div>
   )

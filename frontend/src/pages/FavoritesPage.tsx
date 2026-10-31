@@ -120,6 +120,7 @@ export function FavoritesPage() {
             </button>
           </div>
         )}
+        <h2 className="visually-hidden">Danh sách phim yêu thích</h2>
         <ul
           className="favorites-grid"
           aria-label="Phim yêu thích"
@@ -134,7 +135,7 @@ export function FavoritesPage() {
                 ) : result?.error ? (
                   <article className="favorites-unavailable">
                     <p className="favorites-chapter">TMDB / {movieId}</p>
-                    <h2>Thông tin phim chưa có</h2>
+                    <h3>Thông tin phim chưa có</h3>
                     <p>{result.error}</p>
                     <Link to={`/movies/${movieId}`}>Mở trang chi tiết</Link>
                     <FavoriteButton
@@ -145,7 +146,7 @@ export function FavoritesPage() {
                 ) : (
                   <div
                     className="skeleton favorites-skeleton"
-                    aria-label={`Đang tải phim ${movieId}`}
+                    aria-hidden="true"
                   />
                 )}
               </li>

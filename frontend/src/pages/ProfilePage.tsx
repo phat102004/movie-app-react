@@ -13,6 +13,7 @@ function ProfileLoading() {
       aria-label="Đang tải hồ sơ"
       aria-busy="true"
     >
+      <h1 className="visually-hidden">Đang tải hồ sơ cá nhân</h1>
       <p role="status">Đang tải hồ sơ cá nhân…</p>
       <div className="profile-loading-panel skeleton" aria-hidden="true" />
       <div className="profile-loading-card skeleton" aria-hidden="true" />

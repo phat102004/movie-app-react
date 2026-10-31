@@ -156,7 +156,7 @@
   font-size: 13px;
   overflow-wrap: anywhere;
 }
-.favorites-unavailable h2 {
+.favorites-unavailable h3 {
   font-family: var(--font-editorial);
   font-weight: 400;
   font-size: 22px;

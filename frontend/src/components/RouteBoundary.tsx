@@ -30,6 +30,7 @@ export class RouteBoundary extends Component<{ children: ReactNode }, { failed: 
 export function RouteLoading() {
   return (
     <section className="movie-data-state page-container" aria-busy="true" aria-label="Đang tải trang">
+      <h1 className="visually-hidden">Đang tải trang Cineverse</h1>
       <p role="status">Đang tải trang Cineverse…</p>
     </section>
   )

@@ -79,7 +79,18 @@ function App() {
 
   return (
     <div id="home" className="site-shell">
-      <a className="skip-link" href="#main-content">
+      <a
+        className="skip-link"
+        href="#main-content"
+        onClick={(event) => {
+          // A native fragment navigation drops Router history.state (return URL
+          // and auth notices). Move focus without creating a history entry.
+          event.preventDefault()
+          const main = document.getElementById('main-content')
+          main?.focus({ preventScroll: true })
+          main?.scrollIntoView({ block: 'start', behavior: 'instant' })
+        }}
+      >
         Đi đến nội dung chính
       </a>
       <Header

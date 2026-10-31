@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link, NavLink } from 'react-router'
 import { Icon } from './Icon'
 import { SearchBar } from './SearchBar'
@@ -12,6 +12,7 @@ type HeaderProps = {
 
 export function Header({ searchQuery, onSearchQueryChange }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const navigation = useRef<HTMLElement>(null)
 
   function closeMenu() {
     setIsMenuOpen(false)
@@ -20,6 +21,10 @@ export function Header({ searchQuery, onSearchQueryChange }: HeaderProps) {
   return (
     <header
       className="site-header"
+      onBlur={(event) => {
+        if (event.relatedTarget instanceof Node && !event.currentTarget.contains(event.relatedTarget))
+          closeMenu()
+      }}
       onKeyDown={(event) => {
         if (event.key === 'Escape' && isMenuOpen) {
           closeMenu()
@@ -39,6 +44,7 @@ export function Header({ searchQuery, onSearchQueryChange }: HeaderProps) {
         </Link>
 
         <nav
+          ref={navigation}
           id="main-navigation"
           className={`main-navigation ${isMenuOpen ? 'is-open' : ''}`}
           aria-label="Điều hướng chính"
@@ -90,7 +96,15 @@ export function Header({ searchQuery, onSearchQueryChange }: HeaderProps) {
             aria-label={isMenuOpen ? 'Đóng menu' : 'Mở menu'}
             aria-expanded={isMenuOpen}
             aria-controls="main-navigation"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            onClick={() => {
+              if (isMenuOpen) closeMenu()
+              else {
+                setIsMenuOpen(true)
+                // The disclosure is earlier in DOM order than this button.
+                // Put keyboard users inside it after the hidden links mount.
+                requestAnimationFrame(() => navigation.current?.querySelector('a')?.focus())
+              }
+            }}
           >
             <Icon name={isMenuOpen ? 'close' : 'menu'} />
           </button>

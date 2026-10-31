@@ -17,6 +17,7 @@ export function MovieDataState({
         className="movie-data-state page-container"
         aria-label="Đang tải phim"
       >
+        <h1 className="visually-hidden">Đang tải phim</h1>
         <p role="status">Đang tải phim từ TMDB…</p>
         <div className="hero-layout skeleton-hero" aria-hidden="true">
           <div className="skeleton skeleton-image" />
