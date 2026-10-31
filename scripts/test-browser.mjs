@@ -9,6 +9,7 @@ const suites = [
   ['auth.browser.cjs', '--regression'], ['authLayout.browser.cjs'],
   ['favorites.browser.cjs'], ['profile.browser.cjs'], ['changePassword.browser.cjs'],
   ['multitabAuth.browser.cjs'], ['auditRemediation.browser.cjs'], ['accessibility.browser.cjs'],
+  ['accessibility.browser.cjs', '--advanced'],
 ]
 for (const [suite, ...args] of suites) {
   console.info(`Browser regression: ${suite}`)

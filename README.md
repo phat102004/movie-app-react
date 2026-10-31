@@ -299,6 +299,18 @@ Suite dùng axe-core (dev-only), API fixtures và keyboard thật qua Playwright
 320/375/768/1024/1440px; đã tích hợp vào `test:browser` và `check`.
 Giới hạn kiểm thử và bằng chứng: [Phase 8B — Responsive & accessibility](docs/phase-8b-responsive-accessibility.md).
 
+UX nâng cao trên production build:
+
+```powershell
+npm.cmd run build
+npm.cmd run test:ux
+```
+
+Kiểm tra reflow, forced colors, touch emulation, route titles và các lỗi tải;
+đã tích hợp vào browser runner/quality gate. Phân biệt rõ mô phỏng với browser
+zoom, screen reader và thiết bị thật trong
+[Phase 8C — Final UX validation](docs/phase-8c-final-ux-validation.md).
+
 ## Tài liệu và thứ tự học
 
 1. [API types](frontend/src/types/tmdb.ts) và [API service](frontend/src/services/tmdb.ts): fetch, response.ok, JSON, lỗi và runtime validation.

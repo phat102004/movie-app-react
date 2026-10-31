@@ -37,8 +37,8 @@ async function main() {
     const base = `http://127.0.0.1:${server.address().port}`
     browser = await chromium.launch(require('./browser-options.cjs'))
     result.browser = browser.version()
-    async function fixture(width, member = false) {
-      const context = await browser.newContext({ viewport: { width, height: 900 }, reducedMotion: 'reduce' })
+    async function fixture(width, member = false, options = {}) {
+      const context = await browser.newContext({ viewport: { width, height: 900 }, reducedMotion: 'reduce', ...options })
       const page = await context.newPage()
       page.setDefaultTimeout(10000)
       const state = { member, user: { ...user }, favorites: [27205, 27206], delay: 0, writeDelay: 0, hold: null, failure: false, writes: [] }
@@ -113,6 +113,10 @@ async function main() {
         welcomeHeight: document.querySelector('.auth-page--welcome .auth-intro')?.getBoundingClientRect().height,
         posterRatio: document.querySelector('.movie-poster') ? (() => { const r = document.querySelector('.movie-poster').getBoundingClientRect(); return r.width / r.height })() : null,
       }))
+    }
+    if (process.argv.includes('--advanced')) {
+      await require('./uxValidation.browser.cjs').validate({ browser, base, fixture, axe, layout, baseline })
+      return
     }
     const routes = [
       ['/', '.hero-backdrop'], ['/movies/27205', '#details-title'], ['/favorites', '.favorites-grid .movie-card', true],
