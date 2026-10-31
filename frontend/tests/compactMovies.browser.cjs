@@ -94,6 +94,16 @@ async function waitCount(page, id, count) {
     { id, count },
   )
 }
+async function waitControlFocus(page, id, prefix) {
+  // React commits the card count before MovieList's scheduled focus frame.
+  // Wait for the focus outcome too; DOM readiness alone is not sufficient.
+  await page.waitForFunction(
+    ({ id, prefix }) =>
+      document.activeElement?.closest('section')?.id === id &&
+      document.activeElement?.getAttribute('aria-label')?.startsWith(prefix),
+    { id, prefix },
+  )
+}
 async function ids(page, id) {
   return cards(page, id).evaluateAll((links) =>
     links.map((link) => Number(link.getAttribute('href').split('/').pop())),
@@ -157,6 +167,7 @@ async function fixtures(browser) {
       await ids(page, 'featured-movies'),
       popular.map((movie) => movie.id),
     )
+    await waitControlFocus(page, 'featured-movies', 'Thu gọn danh mục')
     assert.equal(
       await collapse(page, 'featured-movies').evaluate(
         (button) => document.activeElement === button,
@@ -165,6 +176,7 @@ async function fixtures(browser) {
     )
     await page.keyboard.press('Enter')
     await waitCount(page, 'featured-movies', columns)
+    await waitControlFocus(page, 'featured-movies', 'Xem thêm phim')
     assert.equal(
       await more(page, 'featured-movies').evaluate(
         (button) => document.activeElement === button,
