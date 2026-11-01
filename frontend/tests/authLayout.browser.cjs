@@ -287,6 +287,30 @@ async function main() {
       .filter({ hasText: 'Liên kết không hợp lệ' })
       .waitFor()
 
+    await page.addInitScript(() => {
+      window.__holdRecoveryNavigation = false
+      window.__recoveryTasks = []
+      const NativeChannel = window.MessageChannel
+      window.MessageChannel = function () {
+        const channel = new NativeChannel()
+        const descriptor = Object.getOwnPropertyDescriptor(MessagePort.prototype, 'onmessage')
+        Object.defineProperty(channel.port1, 'onmessage', {
+          set(callback) {
+            descriptor.set.call(channel.port1, function (event) {
+              const run = () => callback.call(this, event)
+              if (window.__holdRecoveryNavigation) window.__recoveryTasks.push(run)
+              else run()
+            })
+          },
+        })
+        return channel
+      }
+      window.__resumeRecoveryNavigation = () => {
+        window.__holdRecoveryNavigation = false
+        window.MessageChannel = NativeChannel
+        window.__recoveryTasks.splice(0).forEach(run => run())
+      }
+    })
     await page.goto(base + '/login')
     await page.getByRole('link', { name: '← Trở về Cineverse' }).focus()
     assert.equal(
@@ -302,9 +326,21 @@ async function main() {
         .evaluate((element) => getComputedStyle(element).outlineStyle),
       'solid',
     )
+    await page.evaluate(() => { window.__holdRecoveryNavigation = true })
     await page.keyboard.press('Enter')
     await page.waitForURL('**/forgot-password')
+    await page.waitForFunction(() => window.__recoveryTasks.length > 0)
+    assert.equal(await page.locator('#auth-email').count(), 1)
+    assert.equal(await page.locator('#recovery-email').count(), 0)
+    // Reproduce the previous generic locator filling the old Login component.
     await page.getByLabel('Email', { exact: true }).fill('layout@example.test')
+    assert.equal(await page.locator('#auth-email').inputValue(), 'layout@example.test')
+    await page.evaluate(() => window.__resumeRecoveryNavigation())
+    const recoveryEmail = page.locator('#recovery-email')
+    await recoveryEmail.waitFor()
+    assert.equal(await recoveryEmail.inputValue(), '')
+    // The action under test targets the new route, never the previous Email field.
+    await recoveryEmail.fill('layout@example.test')
     const unavailable = async () => {
       const pending = page.waitForResponse((response) =>
         response.url().endsWith('/api/auth/forgot-password'),
@@ -404,10 +440,10 @@ async function main() {
   }
 }
 
-main().catch(() => {
+main().catch((error) => {
   // Playwright errors can include navigation URL or fill arguments; never print them.
   console.error(
-    'FAIL auth layout/recovery verification. Sensitive details hidden.',
+    require('./browser-diagnostics.cjs').safeBrowserFailure('authLayout.browser.cjs', error),
   )
   process.exitCode = 1
 })

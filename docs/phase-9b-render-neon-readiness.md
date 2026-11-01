@@ -388,3 +388,26 @@ Gate chỉ ở fixture context đầu, khôi phục MessageChannel sau thao tác
 Failure Change Password lịch sử là vấn đề khác, vẫn chưa resolved. Kết quả local
 và workflow run của commit sửa sẽ được xác minh và báo riêng; CI run cũ không
 được gọi là xanh hoặc đại diện cho patch mới.
+
+## 15. CI publication follow-up — recovery form readiness
+
+Run [41269588584](https://github.com/phat102004/movie-app-react/actions/runs/41269588584)
+đã qua production hosting regression có gate mới, sau đó fail Auth Layout.
+Suite Auth Layout cũ bỏ stack trong catch, nên log chỉ còn Error/locations=none;
+không thể khôi phục assertion gốc hoặc khẳng định mọi failure cũ cùng nguyên nhân.
+
+Điều tra bằng gate React tasks đã reproduce một lỗi thực trong suite này: sau
+URL Login → Forgot, DOM vẫn có 1 auth-email/0 recovery-email. Generic label Email
+điền vào Login, sau render Forgot thì recovery-email rỗng. Lần submit sau đó chỉ
+validation local, không tạo POST như test đang chờ. Đây là lỗi synchronization
+đã xác minh độc lập; không đổi authentication/recovery behavior để né lỗi.
+
+Sửa `authLayout.browser.cjs` chờ/điền đúng `#recovery-email`, có regression gate
+chứng minh giá trị ở form cũ không được chuyển sang form mới. Giữ mọi responsive,
+keyboard, HTTP status/code, safe errors và DB-token assertions cũ. Catch dùng
+shared safeBrowserFailure để lần lỗi tiếp theo giữ loại lỗi/source location,
+không in message/input/reset URL. Không sleep/tăng timeout/bỏ tests.
+
+Đây là một file test bổ sung ngoài 20 files ban đầu của Phase 9B, cần thiết để
+điều tra/sửa CI theo phạm vi publication. Không thêm feature hoặc đổi product
+source. Failure Change Password lịch sử vẫn giữ trạng thái chưa xác định root cause.
