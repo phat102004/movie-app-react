@@ -133,8 +133,14 @@ async function main() {
       await page.getByLabel('Mật khẩu', { exact: true }).fill(password)
       await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click()
     }
-    const open = () =>
+    const openButton = () =>
       page.getByRole('button', { name: 'Đổi mật khẩu', exact: true }).click()
+    const open = async () => {
+      await openButton()
+      // The form can be visible before its scheduled focus callback runs.
+      // Complete app-driven focus before Playwright's select/insertText steps.
+      await page.locator('#security-currentPassword:focus').waitFor()
+    }
     const field = (name) => page.getByLabel(name, { exact: true })
     const current = () => field('Mật khẩu hiện tại'),
       next = () => field('Mật khẩu mới'),
@@ -148,6 +154,11 @@ async function main() {
       page
         .getByRole('button', { name: 'Xác nhận đổi mật khẩu', exact: true })
         .click()
+    const settleErrorFocus = () => page.evaluate(() => new Promise(resolve => {
+      // Drain earlier app focus callbacks without assuming focus succeeded while
+      // React was restoring disabled inputs after an asynchronous API error.
+      requestAnimationFrame(() => resolve())
+    }))
     checkpoint = 'guest-login'
     await page.goto(base + '/profile')
     await page.waitForURL('**/login')
@@ -186,10 +197,41 @@ async function main() {
         .click()
     }
     await page.getByRole('button', { name: 'Hủy đổi mật khẩu' }).click()
+    await page.locator('.profile-security .profile-secondary-button:focus').waitFor()
+    await page.evaluate(() => {
+      const frame = window.requestAnimationFrame.bind(window)
+      window.requestAnimationFrame = callback => {
+        window.requestAnimationFrame = frame
+        window.__heldPasswordFocus = callback
+        return 0
+      }
+      const release = event => {
+        if (event.target.id !== 'security-newPassword' || !window.__heldPasswordFocus) return
+        const callback = window.__heldPasswordFocus
+        delete window.__heldPasswordFocus
+        document.removeEventListener('focusin', release, true)
+        // Run the actual queued app callback after field selection/focus but
+        // before the separate keyboard insertText command reaches the browser.
+        queueMicrotask(() => callback(performance.now()))
+      }
+      document.addEventListener('focusin', release, true)
+    })
+    // Reproduce the old click-only helper: visible form is not focus-ready.
+    await openButton()
+    await current().waitFor()
+    assert.equal(await current().evaluate(input => input === document.activeElement), false)
+    await fill('Wrong synthetic current password', newPassword)
+    await submit()
+    await page.locator('#security-newPassword-error').waitFor()
+    assert.equal(await next().inputValue(), '')
+    assert.equal(requests.length, 0)
+    assert.equal(await page.locator('#security-currentPassword-error').count(), 0)
+    await page.getByRole('button', { name: 'Hủy đổi mật khẩu' }).click()
     await open()
+    assert.equal(await current().evaluate(input => input === document.activeElement), true)
     assert.equal(await current().inputValue(), '')
     passed(
-      'security section protected; blank fields; client policy/confirm errors; show/hide 3 fields; cancel clears values',
+      'security section protected; blank fields; client policy/confirm errors; show/hide 3 fields; gated opening-focus race; cancel clears values',
     )
 
     checkpoint = 'wrong-current-reuse'
@@ -199,6 +241,7 @@ async function main() {
       .locator('#security-currentPassword-error')
       .filter({ hasText: 'không chính xác' })
       .waitFor()
+    await settleErrorFocus()
     assert.equal(
       await page
         .getByRole('button', { name: 'Tài khoản của Fixture A' })
@@ -211,6 +254,7 @@ async function main() {
       .locator('#security-newPassword-error')
       .filter({ hasText: 'phải khác' })
       .waitFor()
+    await settleErrorFocus()
     passed(
       'wrong current password and reuse are field-specific 400, user remains authenticated',
     )

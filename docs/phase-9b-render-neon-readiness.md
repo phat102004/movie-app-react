@@ -411,3 +411,51 @@ không in message/input/reset URL. Không sleep/tăng timeout/bỏ tests.
 Đây là một file test bổ sung ngoài 20 files ban đầu của Phase 9B, cần thiết để
 điều tra/sửa CI theo phạm vi publication. Không thêm feature hoặc đổi product
 source. Failure Change Password lịch sử vẫn giữ trạng thái chưa xác định root cause.
+
+## 16. CI publication follow-up — Change Password focus readiness
+
+Run [41270365631](https://github.com/phat102004/movie-app-react/actions/runs/41270365631)
+đã qua Hosting, Auth Layout, Favorites và Profile, sau đó timeout Change Password
+tại dòng 201/checkpoint wrong-current-reuse. Safe diagnostics đã cung cấp vị trí
+cụ thể mà run lịch sử không có.
+
+Reproduce có kiểm soát: giữ RAF mở form, thực thi đúng callback focus của app
+sau select/focus field nhưng trước keyboard insertText của Playwright. Kết quả
+newPassword rỗng, 0 POST requests, có lỗi validation client nhưng không có lỗi
+wrong-current từ API. Đây chính là điều kiện khiến wait tại checkpoint mới timeout.
+Không log password/value; chỉ kiểm booleans/counts với fixture account trong RAM.
+
+Sửa helper open chờ current-password có focus do app đặt trước khi fill. Sau lỗi
+API chờ frame để các callback focus đã xếp lịch hoàn tất trước fill tiếp, không
+áp đặt focus phải thành công trong lúc React đang phục hồi disabled inputs.
+Một wait mới đòi `:focus` sau lỗi API đã bị kiểm thử lặp phát hiện quá chặt; đã
+thay bằng frame barrier, không xóa assertion gốc. Regression giữ kịch bản
+click-only bị ảnh hưởng rồi reset form và chạy luồng đúng; tất cả assertions cũ
+về wrong/reused password, 204, revocation, account B, pending/error, navigation
+và stale Me vẫn còn. Không tăng timeout, thêm sleep hoặc đổi product/security code.
+
+Finding này có bằng chứng cho failure mới và một focus race tái lập được. Không
+suy diễn rằng failure Change Password lịch sử thiếu stack chắc chắn cùng nguyên
+nhân hoặc mọi race khác đã được loại bỏ. Đây là file test bổ sung thứ hai ngoài
+20 files Phase 9B ban đầu; phạm vi publication tăng thành 22 files duy nhất.
+
+Validation trước commit bản sửa focus (2026-11-01):
+
+- Change Password chạy liên tiếp 3 lượt thường / CPU 6× / thường: cả 3 đạt,
+  gồm wrong-current-reuse, gated focus race và toàn bộ 7 nhóm kiểm tra gốc.
+- Clean source mirror không có `.env` thật: `npm run check` đạt, 308 backend +
+  112 frontend tests; lint 199 files, TypeScript, production build và Prisma
+  validation đạt. Full browser gồm hosting, auth/layout, Favorites, Profile,
+  Change Password, 22 multi-tab checkpoints, audit remediation, axe và UX.
+- Axe: 50 pages + 39 extra states, không violation/overflow/keyboard failure.
+  UX: 34 snapshots, 37 checks, không failure; hai nhóm forced-colors contrast
+  cần manual review đã được ghi nhận từ trước, không coi là xác minh thiết bị thật.
+- PostgreSQL native trên cluster test mới/cổng khác 5432: 14/14, shutdown đã
+  xác nhận; không đọc `.env` hay kết nối database developer. Lượt khởi động đầu
+  trong sandbox chưa chạy được; lượt có quyền chạy process test đã hoàn tất.
+- Ghi nhận một lượt full gate bị timeout 8 giây ở test Prisma unavailable-DB
+  hiện có; chạy riêng 7/7 và full gate tiếp theo đạt, không sửa timeout/assertion.
+  Chưa đủ bằng chứng kết luận nguyên nhân timeout local này.
+
+Các kết quả trên là local validation; GitHub Actions cho commit mới vẫn phải
+được xác minh riêng, không suy ra CI xanh từ kết quả local.
