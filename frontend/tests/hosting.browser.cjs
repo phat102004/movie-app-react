@@ -18,8 +18,34 @@ async function main() {
     browser = await chromium.launch(require('./browser-options.cjs'))
     const user = { id: '00000000-0000-4000-8000-000000000001', name: 'Hosting Fixture', email: 'hosting@fixture.test', createdAt: '2026-10-28T00:00:00.000Z' }
     const movie = { id: 27205, title: 'Hosting Movie Fixture', original_title: 'Fixture Cinema', overview: 'Fixture plot', release_date: '2010-07-15', vote_average: 8.4, vote_count: 200, genre_ids: [], poster_path: null, backdrop_path: null }
-    async function setup() {
+    async function setup({ gateNavigation = false } = {}) {
       const context = await browser.newContext({ viewport: { width: 375, height: 900 }, reducedMotion: 'reduce' })
+      if (gateNavigation) await context.addInitScript(() => {
+        // React schedules concurrent work with MessageChannel. Hold that work
+        // to prove URL readiness alone does not mean the old route DOM is gone.
+        window.__holdHostingNavigation = false
+        window.__hostingTasks = []
+        const NativeChannel = window.MessageChannel
+        window.MessageChannel = function () {
+          const channel = new NativeChannel()
+          const descriptor = Object.getOwnPropertyDescriptor(MessagePort.prototype, 'onmessage')
+          Object.defineProperty(channel.port1, 'onmessage', {
+            set(callback) {
+              descriptor.set.call(channel.port1, function (event) {
+                const run = () => callback.call(this, event)
+                if (window.__holdHostingNavigation) window.__hostingTasks.push(run)
+                else run()
+              })
+            },
+          })
+          return channel
+        }
+        window.__resumeHostingNavigation = () => {
+          window.__holdHostingNavigation = false
+          window.MessageChannel = NativeChannel
+          window.__hostingTasks.splice(0).forEach(run => run())
+        }
+      })
       let authenticated = false
       await context.route('https://**/*', route => route.abort())
       await context.route('**/api/**', route => {
@@ -34,17 +60,26 @@ async function main() {
       })
       return context.newPage()
     }
-    const page = await setup()
+    const page = await setup({ gateNavigation: true })
     await page.goto(base)
     await page.locator('.movie-card-link').first().waitFor()
     assert.equal((await page.evaluate(() => performance.getEntriesByType('resource').map(row => row.name))).some(url => /LoginPage-.*\.js/.test(url)), false)
+    await page.evaluate(() => { window.__holdHostingNavigation = true })
     await page.locator('.movie-card-link').first().click()
     await page.waitForURL('**/movies/27205')
-    await page.getByRole('heading', { name: movie.title, exact: true }).waitFor()
+    await page.waitForFunction(() => window.__hostingTasks.length > 0)
+    assert.ok(await page.getByRole('heading', { name: movie.title, exact: true }).count() > 1)
+    assert.equal(await page.locator('#details-title').count(), 0)
+    await assert.rejects(
+      page.getByRole('heading', { name: movie.title, exact: true }).waitFor(),
+      error => /strict mode violation/.test(error.message),
+    )
+    await page.evaluate(() => window.__resumeHostingNavigation())
+    await page.getByRole('heading', { level: 1, name: movie.title, exact: true }).waitFor()
     await page.goBack(); await page.waitForURL(base + '/')
     await page.goForward(); await page.waitForURL('**/movies/27205')
     await page.reload()
-    await page.getByRole('heading', { name: movie.title, exact: true }).waitFor()
+    await page.getByRole('heading', { level: 1, name: movie.title, exact: true }).waitFor()
     assert.equal((await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)), true)
     await page.goto(base + '/profile')
     await page.waitForURL('**/login')
@@ -64,8 +99,8 @@ async function main() {
     await broken.locator('#route-error-title').waitFor()
     await broken.unroute('**/assets/MovieDetailsPage-*.js')
     await broken.getByRole('button', { name: 'Tải lại trang', exact: true }).click()
-    await broken.getByRole('heading', { name: movie.title, exact: true }).waitFor()
-    console.log('PASS production Node hosting: lazy routes, movie links, deep-link refresh, Back/Forward, Profile return after Login, mobile reflow, private/missing asset 404 and chunk failure/reload recovery; fixtures only')
+    await broken.getByRole('heading', { level: 1, name: movie.title, exact: true }).waitFor()
+    console.log('PASS production Node hosting: gated URL/React commit race, exact details H1, lazy routes, movie links, deep-link refresh, Back/Forward, Profile return after Login, mobile reflow, private/missing asset 404 and chunk failure/reload recovery; fixtures only')
   } finally {
     if (browser) await browser.close()
     server.closeAllConnections()

@@ -364,3 +364,27 @@ cài mới từ lockfiles bằng build script trên Windows. Lint cần Git boun
 vì copy nằm trong ignored `.npm-cache`; không commit vào repository copy đó.
 Không tuyên bố CI/Linux/cloud pass cho changeset chưa push. Chỉ sửa tài liệu sau
 gates để thêm bảng bằng chứng này; runtime source đã thử không đổi.
+
+## 14. CI publication follow-up — hosting heading synchronization
+
+Commit Phase 9B `27ba109` đã push; [run 41268840228](https://github.com/phat102004/movie-app-react/actions/runs/41268840228)
+đạt 420 tests/lint/typecheck/build/schema và PostgreSQL native, nhưng browser
+hosting fail tại dòng 43. Diagnostic giữ đúng source location.
+
+Đã reproduce bằng gate giữ MessageChannel tasks của React: URL đổi sang chi
+tiết trong khi DOM vẫn là Home, có **3 h3 cùng tên phim, 0 details heading**.
+Locator cũ chỉ dùng role heading + exact name nên strict-mode violation ngay,
+không phải timeout chờ API. Thả task render thì xuất hiện 1 details heading.
+Windows run nhanh trước đó không bộc lộ khoảng giữa URL change và React commit;
+không quy nguyên nhân cho Linux thiếu tài nguyên khi chưa có bằng chứng đó.
+
+Sửa tối thiểu trong `hosting.browser.cjs`: chờ đúng heading **level 1 + exact
+movie title**, áp dụng cả refresh và chunk-reload. Giữ mọi assertion/chức năng
+cũ; thêm regression gate chứng minh locator cũ ambiguous trước render và locator
+mới nhận heading chi tiết sau render. Không dùng first() để bỏ uniqueness, không
+sleep/tăng timeout, không đổi product/auth/database/security code hoặc policy.
+Gate chỉ ở fixture context đầu, khôi phục MessageChannel sau thao tác.
+
+Failure Change Password lịch sử là vấn đề khác, vẫn chưa resolved. Kết quả local
+và workflow run của commit sửa sẽ được xác minh và báo riêng; CI run cũ không
+được gọi là xanh hoặc đại diện cho patch mới.
