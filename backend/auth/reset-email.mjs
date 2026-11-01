@@ -1,5 +1,6 @@
 import { HttpError } from '../http.mjs'
 import { isValidEmail } from './validation.mjs'
+import { createResendTransport } from './resend-transport.mjs'
 
 export const emailUnavailable = () =>
   new HttpError(
@@ -12,7 +13,16 @@ export const emailUnavailable = () =>
 export function readResetEmailConfig(env, authConfig) {
   const mode = env.PASSWORD_RESET_EMAIL_MODE ?? 'disabled'
   if (mode === 'disabled') return null
-  if (!['smtp', 'local'].includes(mode)) throw emailUnavailable()
+  if (!['smtp', 'local', 'resend'].includes(mode)) throw emailUnavailable()
+  if (mode === 'resend') {
+    const key = env.RESEND_API_KEY
+    const origin = env.PUBLIC_APP_ORIGIN ?? ''
+    if (!authConfig.allowedOrigins.has(origin) ||
+      authConfig.production && !origin.startsWith('https:') ||
+      !isValidEmail(env.SMTP_FROM) || !/^re_[A-Za-z0-9_-]{20,200}$/.test(key ?? ''))
+      throw emailUnavailable()
+    return { origin, from: env.SMTP_FROM, transport: 'resend', apiKey: key }
+  }
   const local = mode === 'local'
   const host = env.SMTP_HOST ?? ''
   const port = Number(env.SMTP_PORT)
@@ -76,6 +86,7 @@ export function createResetEmailDelivery({
   config,
   env = process.env,
   createTransport,
+  fetchImpl,
 } = {}) {
   let settings
   let transport
@@ -93,10 +104,11 @@ export function createResetEmailDelivery({
       this.ready()
       try {
         if (!transport) {
-          const factory =
-            createTransport ??
-            (await import('nodemailer')).default.createTransport
-          transport = factory(settings.options)
+          if (settings.transport === 'resend') transport = createResendTransport(settings.apiKey, { fetchImpl })
+          else {
+            const factory = createTransport ?? (await import('nodemailer')).default.createTransport
+            transport = factory(settings.options)
+          }
         }
         // Cả hai trường hợp đều gửi qua SMTP, tránh tạo oracle qua lỗi provider.
         // Chỉ chủ hộp thư thấy hướng dẫn riêng; tài khoản không tồn tại không có link giả.

@@ -27,7 +27,7 @@ export async function createDatabaseClient(config) {
 export function getPrisma() {
   if (!clientPromise) {
     clientPromise = (async () => {
-      loadBackendEnv()
+      if (process.env.NODE_ENV !== 'production' && process.env.RENDER !== 'true') loadBackendEnv()
       return createDatabaseClient(readRuntimeDatabaseConfig())
     })().catch((error) => {
       clientPromise = undefined

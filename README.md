@@ -366,3 +366,11 @@ zoom, screen reader và thiết bị thật trong
 **Xác minh Phase 6.4C:** 287 tests đạt (187 backend + 100 frontend; thêm 23 backend và 13 frontend tests), 7 nhóm Change Password browser cùng hồi quy Profile/Favorites/Auth/movie/layout đạt; lint/typecheck/build và db:validate/db:check đạt. Không schema drift; counts/history giữ nguyên (User 3, Session 1, ResetToken 1, Favorite 3; 4 migrations). Positive password changes chỉ dùng fixtures/PGlite RAM; không đổi mật khẩu tài khoản thật.
 
 Dừng tại Phase 6.4C. Profile có sửa tên và đổi mật khẩu, email chỉ đọc/chưa avatar; password change buộc Login lại sau khi thu hồi sessions. Favorites và giao diện hiện có giữ nguyên; email delivery cần người dùng cấu hình để nhận link thật. Chưa thêm TV Favorites, JWT/OAuth/MFA hoặc phát phim đầy đủ. Khi đưa SPA lên hosting cần fallback các URL giao diện về index.html (bao gồm `/favorites` và `/profile`), đặt no-store cho trang recovery và Referrer-Policy: no-referrer; xem tài liệu Phase 6.2D/6.2E.
+
+**Phase 9B — Render + Neon readiness:** [kiến trúc, build/start, môi trường mẫu,
+tests và các blocker trước deploy](docs/phase-9b-render-neon-readiness.md).
+`npm run build:render` chỉ dành clean checkout không `.env`; `npm start` dùng
+runtime preflight trước listen. Render mode phải được cấu hình rõ ràng; local vẫn
+loopback. Source có same-origin SPA/static, health/readiness và email HTTPS,
+nhưng Neon ACL, Render ingress trust và sender delivery cần xác minh ở 9C.
+Chưa tạo resources, deploy hoặc thay policy least privilege.

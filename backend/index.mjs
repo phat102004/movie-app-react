@@ -1,40 +1,13 @@
 import { loadBackendEnv } from './env.mjs'
-import { disconnectDatabase } from './database/client.mjs'
-import { createAppServer } from './server.mjs'
-import { readTmdbProxyConfig } from './upstream-scheduler.mjs'
+import { startBackend } from './runtime.mjs'
 
-loadBackendEnv()
-
-const server = createAppServer({
-  tmdb: {
-    token: process.env.TMDB_READ_ACCESS_TOKEN,
-    ...readTmdbProxyConfig(),
-  },
-})
-server.on('error', (error) => {
-  console.error(
-    error.code === 'EADDRINUSE'
-      ? 'Cổng 3001 đang được sử dụng. Dừng proxy cũ trước khi chạy npm.cmd run dev.'
-      : `Không thể khởi động proxy tại 127.0.0.1:3001 (${error.code ?? 'UNKNOWN'}).`,
-  )
-  process.exitCode = 1
-})
-server.listen(3001, '127.0.0.1', () => {
-  console.info('Cineverse proxy: http://127.0.0.1:3001')
-  // Báo cho script dev chỉ mở Vite sau khi backend đã lắng nghe.
+// Render/production receives injected environment, never a developer .env file.
+if (process.env.NODE_ENV !== 'production' && process.env.RENDER !== 'true') loadBackendEnv()
+try {
+  const { binding } = await startBackend()
+  console.info(`Cineverse proxy listening: ${binding.host}:${binding.port}`)
   process.send?.({ type: 'proxy-ready' })
-})
-
-for (const signal of ['SIGINT', 'SIGTERM']) {
-  process.on(signal, () => {
-    server.close(() => {
-      disconnectDatabase().catch(() => {
-        console.error(
-          'Không thể đóng database bình thường; đã ẩn chi tiết nội bộ.',
-        )
-        process.exitCode = 1
-      })
-    })
-    server.closeAllConnections()
-  })
+} catch {
+  console.error('Cineverse startup failed. Check configuration/build/port/database; credentials and internal details hidden.')
+  process.exit(1)
 }

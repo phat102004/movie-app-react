@@ -2,7 +2,8 @@ import { createClientIpResolver } from './client-ip.mjs'
 import { createServer } from 'node:http'
 import { createRegisterHandler } from './auth/register-route.mjs'
 import { createProxyHandler } from './proxy.mjs'
-import { HttpError, sendHttpError } from './http.mjs'
+import { HttpError, sendHttpError, sendJson } from './http.mjs'
+import { createReadinessProbe } from './health.mjs'
 import { readAuthConfig } from './auth/config.mjs'
 import { assertAuthRequest } from './auth/security.mjs'
 import { createSessionService } from './auth/session-service.mjs'
@@ -27,6 +28,8 @@ export function createAppServer({
   favorites = {},
   profile = {},
   passwordChange = {},
+  readiness = createReadinessProbe(),
+  frontend = null,
 } = {}) {
   const getClientIp = createClientIpResolver(trustedProxyCidrs)
   const config = auth.config ?? readAuthConfig()
@@ -116,6 +119,21 @@ export function createAppServer({
           url = new URL(request.url ?? '/', 'http://localhost')
         } catch {
           throw new HttpError(400, 'BAD_REQUEST', 'Đường dẫn không hợp lệ.')
+        }
+        if (url.pathname === '/health/live' || url.pathname === '/health/ready') {
+          if (request.method !== 'GET') {
+            response.setHeader('Allow', 'GET')
+            throw new HttpError(405, 'METHOD_NOT_ALLOWED', 'Chỉ hỗ trợ GET.')
+          }
+          const ready = url.pathname === '/health/live' || await readiness.ready()
+          sendJson(response, ready ? 200 : 503, { status: ready ? 'ok' : 'unavailable' })
+          request.resume()
+          return
+        }
+        if (frontend && url.pathname !== '/api' && !url.pathname.startsWith('/api/')) {
+          frontend(request, response)
+          request.resume()
+          return
         }
         if (url.pathname === '/api/profile/change-password') {
           await handlePasswordChange(request, response, url)

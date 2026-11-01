@@ -6,6 +6,8 @@
     "node": ">=22.18.0"
   },
   "scripts": {
+    "start": "node backend/index.mjs",
+    "build:render": "node scripts/build-render.mjs",
     "dev": "node scripts/dev.mjs",
     "dev:proxy": "node backend/index.mjs",
     "dev:frontend": "npm --prefix frontend run dev:only",

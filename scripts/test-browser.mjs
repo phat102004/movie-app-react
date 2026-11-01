@@ -6,6 +6,7 @@ const run = promisify(execFile)
 const require = createRequire(import.meta.url)
 const playwright = require.resolve('playwright')
 const suites = [
+  ['hosting.browser.cjs'],
   ['auth.browser.cjs', '--regression'], ['authLayout.browser.cjs'],
   ['favorites.browser.cjs'], ['profile.browser.cjs'], ['changePassword.browser.cjs'],
   ['multitabAuth.browser.cjs'], ['auditRemediation.browser.cjs'], ['accessibility.browser.cjs'],
