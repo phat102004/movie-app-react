@@ -476,7 +476,9 @@ async function main() {
 }
 main().catch((error) => {
   console.error(
-    `Change Password browser verification failed at ${checkpoint}; ${error.name}; input/credentials hidden.`,
+    require('./browser-diagnostics.cjs').safeBrowserFailure(
+      'changePassword.browser.cjs', error, checkpoint,
+    ),
   )
   process.exitCode = 1
 })
