@@ -1,11 +1,12 @@
 import { DatabaseConfigError } from './config.mjs'
+import { hasVerifiedProviderConnect, verifyProviderConnect } from './provider-connect.mjs'
 
 export const applicationTables = ['User', 'Session', 'PasswordResetToken', 'Favorite']
 const fail = (reason) => {
   throw new DatabaseConfigError(`Database production không đạt least privilege (${reason}). Dừng để DBA review; không tự cấp quyền hoặc đổi owner.`)
 }
 
-export function validateProductionRole(snapshot, purpose) {
+function validateRolePredicates(snapshot, purpose) {
   const id = snapshot.identity
   const runtime = purpose === 'runtime'
   if (!['runtime', 'migration'].includes(purpose)) fail('PURPOSE')
@@ -16,7 +17,7 @@ export function validateProductionRole(snapshot, purpose) {
     id.createRole !== false || id.replication !== false || id.bypassRls !== false ||
     id.inherit !== false || id.memberships !== 0) fail('ROLE_ATTRIBUTES_OR_MEMBERSHIP')
   if (id.dbOwner !== false || id.dbConnect !== true || id.dbTemp !== false ||
-    id.dbCreate !== !runtime || id.otherDatabaseConnect !== false) fail('DATABASE_PRIVILEGES')
+    id.dbCreate !== !runtime) fail('DATABASE_PRIVILEGES')
   const schema = snapshot.schemas.find(row => row.name === 'public')
   if (!schema || schema.usage !== true || schema.create !== !runtime) fail('SCHEMA_PRIVILEGES')
   if (runtime && (id.ownsObjects !== false || id.unsafeRoutines !== false || snapshot.schemas.some(row => row.owner || row.create || (row.name !== 'public' && row.usage))))
@@ -42,6 +43,17 @@ export function validateProductionRole(snapshot, purpose) {
   }
 }
 
+export function validateProductionRole(snapshot, purpose, providerPolicy) {
+  validateRolePredicates(snapshot, purpose)
+  validateCrossDatabaseConnect(snapshot, providerPolicy)
+}
+
+export function validateCrossDatabaseConnect(snapshot, providerPolicy) {
+  const value = snapshot.identity.otherDatabaseConnect
+  if (value !== false && (value !== true || !hasVerifiedProviderConnect(snapshot, providerPolicy)))
+    fail('DATABASE_PRIVILEGES')
+}
+
 // Only PostgreSQL metadata/ACLs. Never selects password hashes or application rows.
 export async function inspectRoleSecurity(client) {
   const [identity] = await client.$queryRaw`
@@ -57,14 +69,14 @@ export async function inspectRoleSecurity(client) {
       EXISTS(SELECT 1 FROM pg_catalog.pg_database x WHERE x.datallowconn AND x.oid <> d.oid
         AND has_database_privilege(current_user, x.oid, 'CONNECT')) AS "otherDatabaseConnect",
       EXISTS(SELECT 1 FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
-        WHERE p.prosecdef AND n.nspname NOT LIKE 'pg_%' AND n.nspname <> 'information_schema'
+        WHERE p.prosecdef AND LEFT(n.nspname, 3) <> 'pg_' AND n.nspname <> 'information_schema'
         AND has_function_privilege(current_user, p.oid, 'EXECUTE')) AS "unsafeRoutines",
       (EXISTS(SELECT 1 FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
-        WHERE c.relowner = r.oid AND n.nspname NOT LIKE 'pg_%' AND n.nspname <> 'information_schema')
+        WHERE c.relowner = r.oid AND LEFT(n.nspname, 3) <> 'pg_' AND n.nspname <> 'information_schema')
        OR EXISTS(SELECT 1 FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
-        WHERE p.proowner = r.oid AND n.nspname NOT LIKE 'pg_%' AND n.nspname <> 'information_schema')
+        WHERE p.proowner = r.oid AND LEFT(n.nspname, 3) <> 'pg_' AND n.nspname <> 'information_schema')
        OR EXISTS(SELECT 1 FROM pg_catalog.pg_type t JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
-        WHERE t.typowner = r.oid AND n.nspname NOT LIKE 'pg_%' AND n.nspname <> 'information_schema')) AS "ownsObjects"
+        WHERE t.typowner = r.oid AND LEFT(n.nspname, 3) <> 'pg_' AND n.nspname <> 'information_schema')) AS "ownsObjects"
     FROM pg_catalog.pg_roles r JOIN pg_catalog.pg_database d ON d.datname = current_database()
     WHERE r.rolname = current_user
   `
@@ -72,7 +84,8 @@ export async function inspectRoleSecurity(client) {
     SELECT nspname::text AS name, nspowner = (SELECT oid FROM pg_catalog.pg_roles WHERE rolname = current_user) AS owner,
       has_schema_privilege(current_user, oid, 'USAGE') AS usage,
       has_schema_privilege(current_user, oid, 'CREATE') AS create
-    FROM pg_catalog.pg_namespace WHERE nspname NOT LIKE 'pg_%' AND nspname <> 'information_schema'
+    FROM pg_catalog.pg_namespace WHERE LEFT(nspname, 3) <> 'pg_' AND nspname <> 'information_schema'
+    ORDER BY nspname
   `
   const tables = await client.$queryRaw`
     SELECT n.nspname::text AS schema, c.relname::text AS name, c.relkind::text AS kind,
@@ -97,7 +110,8 @@ export async function inspectRoleSecurity(client) {
        has_table_privilege(current_user, c.oid, 'UPDATE WITH GRANT OPTION') OR
        has_table_privilege(current_user, c.oid, 'DELETE WITH GRANT OPTION')) AS "grantOption"
     FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
-    WHERE n.nspname NOT LIKE 'pg_%' AND n.nspname <> 'information_schema' AND c.relkind IN ('r','p','v','m','f')
+    WHERE LEFT(n.nspname, 3) <> 'pg_' AND n.nspname <> 'information_schema' AND c.relkind IN ('r','p','v','m','f')
+    ORDER BY n.nspname, c.relname
   `
   const sequences = await client.$queryRaw`
     SELECT c.relowner = (SELECT oid FROM pg_catalog.pg_roles WHERE rolname = current_user) AS owner,
@@ -105,11 +119,21 @@ export async function inspectRoleSecurity(client) {
       has_sequence_privilege(current_user, c.oid, 'SELECT') AS select,
       has_sequence_privilege(current_user, c.oid, 'UPDATE') AS update
     FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
-    WHERE n.nspname NOT LIKE 'pg_%' AND n.nspname <> 'information_schema' AND c.relkind = 'S'
+    WHERE LEFT(n.nspname, 3) <> 'pg_' AND n.nspname <> 'information_schema' AND c.relkind = 'S'
+    ORDER BY c.oid
   `
   return { identity, schemas, tables, sequences }
 }
 
 export async function assertProductionRole(client, config) {
-  if (config.production) validateProductionRole(await inspectRoleSecurity(client), config.purpose)
+  if (config.production) {
+    const snapshot = await inspectRoleSecurity(client)
+    // Validate all remaining predicates before any additional connection. Final
+    // validation retains the original effective cross-database CONNECT flag.
+    if (config.providerPolicy) {
+      validateRolePredicates(snapshot, config.purpose)
+      await verifyProviderConnect(client, config, snapshot, inspectRoleSecurity)
+    }
+    validateProductionRole(snapshot, config.purpose, config.providerPolicy)
+  }
 }

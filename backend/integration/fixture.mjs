@@ -52,9 +52,9 @@ export async function nativeFixture() {
     const databases = (await admin.query('SELECT datname FROM pg_catalog.pg_database ORDER BY datname')).rows.map(row => row.datname)
     assert.deepEqual(databases, ['cineverse_ci', 'postgres', 'template0', 'template1'])
     const objects = await admin.query(`SELECT c.oid FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
-      WHERE n.nspname NOT LIKE 'pg_%' AND n.nspname <> 'information_schema'`)
+      WHERE LEFT(n.nspname, 3) <> 'pg_' AND n.nspname <> 'information_schema'`)
     assert.equal(objects.rowCount, 0, 'Refuse nonempty database; recreate the disposable cluster, never reset it.')
-    const otherRoles = await admin.query(`SELECT rolname FROM pg_catalog.pg_roles WHERE rolname NOT LIKE 'pg_%' AND rolname <> $1`, [bootstrapRole])
+    const otherRoles = await admin.query(`SELECT rolname FROM pg_catalog.pg_roles WHERE LEFT(rolname, 3) <> 'pg_' AND rolname <> $1`, [bootstrapRole])
     assert.equal(otherRoles.rowCount, 0, 'Refuse shared cluster with existing roles.')
     const sql = await readFile(new URL('../database/production-roles.sql', import.meta.url), 'utf8')
     const bootstrap = sql.split('-- BOOTSTRAP_BEGIN')[1]?.split('-- BOOTSTRAP_END')[0]

@@ -3,6 +3,7 @@ import { isAbsolute } from 'node:path'
 import { isIP } from 'node:net'
 import { X509Certificate } from 'node:crypto'
 import { DatabaseConfigError, readDatabaseConfig } from './config.mjs'
+import { readDatabaseSecurityPolicy } from './provider-policy.mjs'
 
 const fail = () => new DatabaseConfigError(
   'Cấu hình database production chưa an toàn: cần đúng host đã xác nhận, cineverse_prod/public, role riêng và TLS strict. Không dùng cấu hình local làm dự phòng.',
@@ -54,6 +55,7 @@ export function readProductionDatabaseConfig(env, purpose) {
   return {
     production: true,
     purpose,
+    providerPolicy: readDatabaseSecurityPolicy(env, host),
     connectionString: url.toString(),
     driver: {
       host, port: 5432, database: 'cineverse_prod', user, password, ssl,
@@ -69,6 +71,10 @@ export function readProductionDatabaseConfig(env, purpose) {
 function production(env) {
   if (env.NODE_ENV !== undefined && !['development', 'test', 'production'].includes(env.NODE_ENV))
     throw new DatabaseConfigError('NODE_ENV không hợp lệ; không tự suy đoán môi trường database.')
+  if (env.NODE_ENV !== 'production' &&
+    ((env.DATABASE_SECURITY_POLICY !== undefined && env.DATABASE_SECURITY_POLICY !== 'strict') ||
+      env.DATABASE_PROVIDER_EVIDENCE_FILE))
+    throw new DatabaseConfigError('Managed database policy chỉ dùng trong production đã được xác minh.')
   return env.NODE_ENV === 'production'
 }
 

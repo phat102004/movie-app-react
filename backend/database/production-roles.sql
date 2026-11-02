@@ -26,7 +26,7 @@ DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_catalog.pg_roles WHERE rolname IN ('cineverse_app', 'cineverse_migrator'))
      OR EXISTS (SELECT 1 FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
-       WHERE n.nspname NOT LIKE 'pg_%' AND n.nspname <> 'information_schema')
+       WHERE LEFT(n.nspname, 3) <> 'pg_' AND n.nspname <> 'information_schema')
      OR NOT EXISTS (SELECT 1 FROM pg_catalog.pg_namespace WHERE nspname = 'public')
   THEN RAISE EXCEPTION 'Stopped: roles/objects already exist or public is absent. DBA must review; no automatic ownership transfer.';
   END IF;

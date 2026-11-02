@@ -102,7 +102,7 @@ export async function inspectDatabase(client) {
     c.relkind::text AS kind
   FROM pg_catalog.pg_class c
   JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
-  WHERE n.nspname NOT LIKE 'pg_%'
+  WHERE LEFT(n.nspname, 3) <> 'pg_'
     AND n.nspname <> 'information_schema'
     AND c.relkind IN ('r', 'p', 'v', 'm', 'f', 'S')
   ORDER BY n.nspname, c.relname

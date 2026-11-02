@@ -42,7 +42,7 @@ export async function inspectProductionMigration(client) {
   const objects = await client.$queryRaw`
     SELECT n.nspname::text AS schema, c.relname::text AS name, c.relkind::text AS kind
     FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
-    WHERE n.nspname NOT LIKE 'pg_%' AND n.nspname <> 'information_schema' AND c.relkind IN ('r','p','v','m','f','S')
+    WHERE LEFT(n.nspname, 3) <> 'pg_' AND n.nspname <> 'information_schema' AND c.relkind IN ('r','p','v','m','f','S')
   `
   const hasHistory = objects.some(row => row.schema === 'public' && row.name === '_prisma_migrations' && row.kind === 'r')
   const migrations = hasHistory ? await client.$queryRaw`

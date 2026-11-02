@@ -12,6 +12,8 @@ import { createProfileService } from '../profile/profile-service.mjs'
 import { createFavoriteService } from '../favorites/favorite-service.mjs'
 import { inspectRoleSecurity, validateProductionRole } from '../database/role-security.mjs'
 import { createAppServer } from '../server.mjs'
+import { testNativeProviderPolicy } from './provider-policy.mjs'
+import { testStrictSchemaPrefix } from './schema-prefix.mjs'
 
 const password = 'Synthetic native old password 123!'
 const nextPassword = 'Synthetic native new password 456!'
@@ -240,5 +242,11 @@ test('PostgreSQL native: disposable migrations, runtime permissions and multi-co
     await assert.rejects(nativeFixture(), /Refuse nonempty database/)
     assert.equal(await f.a.user.count(), count)
     assert.equal((await f.b.$queryRaw`SELECT current_user AS role`)[0].role, 'cineverse_app')
+  })
+  await t.test('literal system-schema prefix and strict role guard on real PostgreSQL', async st => {
+    await testStrictSchemaPrefix(st, f)
+  })
+  await t.test('managed compatibility catalog and cross-database checks on private PostgreSQL only', async st => {
+    await testNativeProviderPolicy(st, f)
   })
 })
