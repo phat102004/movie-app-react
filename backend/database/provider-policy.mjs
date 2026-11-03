@@ -9,30 +9,35 @@ const keys = (value, names) => value && typeof value === 'object' && !Array.isAr
   Object.keys(value).sort().join(',') === [...names].sort().join(',')
 const owner = row => oid(row.ownerOid) && label(row.owner) &&
   !['cineverse_app', 'cineverse_migrator', 'neon_superuser', 'pg_database_owner'].includes(row.owner)
+export const isManagedV1 = value => value?.version === 2 && value.contract === 'managed-postgresql-v1'
+const defaults = row => typeof row.publicTemporary === 'boolean' && typeof row.publicSchemaUsage === 'boolean'
 
-// This is an operator-reviewed attestation, not proof obtained from an untrusted
+// This is trusted operator configuration, NOT independent provider attestation.
 // database name. No TOFU collector, cloud API call or environment auto-detection.
 export function validateNeonEvidence(value, host, now = Date.now()) {
+  const managed = isManagedV1(value)
   if (!keys(value, ['version', 'provider', 'host', 'projectId', 'branchId', 'endpointId',
-    'reviewRef', 'reviewedAt', 'expiresAt', 'target', 'systemDatabases']) ||
-    value.version !== 1 || value.provider !== 'neon' || value.host !== host || typeof host !== 'string' ||
+    'reviewRef', 'reviewedAt', 'expiresAt', 'target', 'systemDatabases', ...(managed ? ['contract'] : [])]) ||
+    (!managed && value.version !== 1) || value.provider !== 'neon' || value.host !== host || typeof host !== 'string' ||
     !label(value.projectId) || !/^br-[a-z0-9-]+$/.test(value.branchId) ||
     !/^ep-[a-z0-9-]+$/.test(value.endpointId) || value.endpointId.endsWith('-pooler') ||
     !host.startsWith(value.endpointId + '.') || !host.endsWith('.neon.tech') ||
     !label(value.reviewRef)) fail()
   const reviewed = Date.parse(value.reviewedAt), expires = Date.parse(value.expiresAt)
+  if (managed && (typeof value.reviewedAt !== 'string' || typeof value.expiresAt !== 'string')) fail()
   if (!Number.isFinite(reviewed) || !Number.isFinite(expires) || reviewed > now ||
     expires <= now || expires <= reviewed || expires - reviewed > 86_400_000) fail()
   const target = value.target
-  if (!keys(target, ['name', 'oid', 'owner', 'ownerOid']) ||
-    target.name !== 'cineverse_prod' || !oid(target.oid) || !owner(target)) fail()
+  if (!keys(target, ['name', 'oid', 'owner', 'ownerOid', ...(managed ? ['publicTemporary', 'publicSchemaUsage'] : [])]) ||
+    target.name !== 'cineverse_prod' || !oid(target.oid) || !owner(target) ||
+    (managed && (!defaults(target) || target.publicSchemaUsage !== true))) fail()
   if (!Array.isArray(value.systemDatabases) || value.systemDatabases.length !== 2) fail()
   const rows = value.systemDatabases
   for (const [name, isTemplate] of [['postgres', false], ['template1', true]]) {
     const row = rows.find(row => row?.name === name)
-    if (!keys(row, ['name', 'oid', 'owner', 'ownerOid', 'isTemplate']) ||
+    if (!keys(row, ['name', 'oid', 'owner', 'ownerOid', 'isTemplate', ...(managed ? ['publicTemporary', 'publicSchemaUsage'] : [])]) ||
       !oid(row.oid) || !owner(row) || row.isTemplate !== isTemplate ||
-      row.ownerOid === target.ownerOid || row.owner === target.owner) fail()
+      row.ownerOid === target.ownerOid || row.owner === target.owner || (managed && !defaults(row))) fail()
   }
   if (new Set([target.oid, ...rows.map(row => row.oid)]).size !== 3) fail()
   return Object.freeze({ ...value, target: Object.freeze({ ...target }),
@@ -43,7 +48,7 @@ export function readDatabaseSecurityPolicy(env, host) {
   const mode = env.DATABASE_SECURITY_POLICY ?? 'strict'
   const file = env.DATABASE_PROVIDER_EVIDENCE_FILE
   if (mode === 'strict' && !file) return undefined
-  if (mode !== 'neon-reviewed-system-connect' || env.NODE_ENV !== 'production' ||
+  if (!['neon-reviewed-system-connect', 'neon-managed-v1'].includes(mode) || env.NODE_ENV !== 'production' ||
     typeof file !== 'string' || !isAbsolute(file)) fail()
   let value, fd
   try {
@@ -54,5 +59,7 @@ export function readDatabaseSecurityPolicy(env, host) {
     if (size > 8192) fail()
     value = JSON.parse(buffer.subarray(0, size).toString('utf8'))
   } catch { fail() } finally { if (fd !== undefined) closeSync(fd) }
-  return validateNeonEvidence(value, host)
+  const policy = validateNeonEvidence(value, host)
+  if (isManagedV1(policy) !== (mode === 'neon-managed-v1')) fail()
+  return policy
 }

@@ -59,7 +59,7 @@ export function readProductionDatabaseConfig(env, purpose) {
     connectionString: url.toString(),
     driver: {
       host, port: 5432, database: 'cineverse_prod', user, password, ssl,
-      options: '-c search_path=pg_catalog,public',
+      options: '-c search_path=pg_catalog,public,pg_temp',
       max: purpose === 'runtime' ? 3 : 1,
       connectionTimeoutMillis: 5000, idleTimeoutMillis: 5000,
       statement_timeout: purpose === 'runtime' ? 5000 : 30_000,

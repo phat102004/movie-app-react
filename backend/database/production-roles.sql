@@ -46,8 +46,8 @@ GRANT CONNECT ON DATABASE cineverse_prod TO cineverse_app, cineverse_migrator;
 GRANT CREATE ON DATABASE cineverse_prod TO cineverse_migrator;
 GRANT USAGE ON SCHEMA public TO cineverse_app;
 GRANT USAGE, CREATE ON SCHEMA public TO cineverse_migrator;
-ALTER ROLE cineverse_app IN DATABASE cineverse_prod SET search_path = pg_catalog, public;
-ALTER ROLE cineverse_migrator IN DATABASE cineverse_prod SET search_path = pg_catalog, public;
+ALTER ROLE cineverse_app IN DATABASE cineverse_prod SET search_path = pg_catalog, public, pg_temp;
+ALTER ROLE cineverse_migrator IN DATABASE cineverse_prod SET search_path = pg_catalog, public, pg_temp;
 -- BOOTSTRAP_END
 COMMIT;
 

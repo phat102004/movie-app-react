@@ -8,13 +8,14 @@ import { reviewedProductionMigrations } from '../database/production-migration-p
 import { readNativeTestConfig, nativeDatabase, nativeCluster, bootstrapRole, runtimePassword, migratorPassword } from './config.mjs'
 
 const run = promisify(execFile)
-export async function migrateNativeFixture() {
+export async function migrateNativeFixture(configFile = 'backend/integration/prisma.config.mjs') {
+  assert.ok(['backend/integration/prisma.config.mjs', 'backend/integration/managed-prisma.config.mjs'].includes(configFile))
   // Configuration is revalidated before each CLI invocation.
   readNativeTestConfig()
   const args = ['node_modules/prisma/build/index.js', 'migrate']
   async function prisma(command) {
     try {
-      await run(process.execPath, [...args, ...command, '--config', 'backend/integration/prisma.config.mjs'], {
+      await run(process.execPath, [...args, ...command, '--config', configFile], {
         windowsHide: true, timeout: 60_000, maxBuffer: 512_000,
         env: { ...process.env, NODE_ENV: 'test', DATABASE_URL: '', MIGRATION_DATABASE_URL: '' },
       })

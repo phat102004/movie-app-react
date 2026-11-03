@@ -7,7 +7,8 @@ import { inspectRoleSecurity, validateProductionRole } from '../database/role-se
 import { inspectDatabase } from '../database/inspect.mjs'
 import { inspectProductionMigration } from '../database/production-migration-plan.mjs'
 import { probeProviderDatabase, validateProviderProbe } from '../database/provider-connect.mjs'
-import { knownMigrations } from '../database/inspect.mjs'
+import { migrateNativeFixture } from './fixture.mjs'
+import { testManagedContract } from './managed-contract.mjs'
 
 const adapter = client => ({ $queryRaw: async (strings, ...values) => {
   assert.equal(values.length, 0)
@@ -90,15 +91,14 @@ export async function testStrictSchemaPrefix(t, f) {
     await admin.query('REVOKE USAGE, CREATE ON SCHEMA public FROM PUBLIC')
     await admin.query('GRANT USAGE, CREATE ON SCHEMA public TO cineverse_migrator')
     await admin.query('GRANT USAGE ON SCHEMA public TO cineverse_app')
+    // Real Prisma CLI migrations/diff with PUBLIC TEMP, only on this private DB.
+    await admin.query('GRANT TEMP ON DATABASE cineverse_prod TO PUBLIC')
+    await admin.query('ALTER ROLE cineverse_app IN DATABASE cineverse_prod SET search_path=pg_catalog,public,pg_temp')
+    await admin.query('ALTER ROLE cineverse_migrator IN DATABASE cineverse_prod SET search_path=pg_catalog,public,pg_temp')
+    await migrateNativeFixture('backend/integration/managed-prisma.config.mjs')
+    await admin.query('REVOKE TEMP ON DATABASE cineverse_prod FROM PUBLIC')
     await migrator.connect()
-    await migrator.query('SET search_path = public') // Same schema as Prisma CLI.
-    for (const name of knownMigrations)
-      await migrator.query(await readFile(new URL(`../prisma/migrations/${name}/migration.sql`, import.meta.url), 'utf8'))
-    // Minimal empty history for ACL/inventory tests; the existing cineverse_ci
-    // suite separately tests real Prisma deploy/history/checksums and drift.
-    await migrator.query(`CREATE TABLE public._prisma_migrations (
-      id text PRIMARY KEY, migration_name text, checksum text, finished_at timestamptz,
-      rolled_back_at timestamptz, started_at timestamptz DEFAULT now())`)
+    await migrator.query('SET search_path=pg_catalog,public,pg_temp')
     const grants = await readFile(new URL('../database/production-runtime-grants.sql', import.meta.url), 'utf8')
     await admin.query(grants.split('-- RUNTIME_GRANTS_BEGIN')[1].split('-- RUNTIME_GRANTS_END')[0])
     await f.admin.query('REVOKE CONNECT ON DATABASE cineverse_ci FROM cineverse_app, cineverse_migrator')
@@ -108,6 +108,9 @@ export async function testStrictSchemaPrefix(t, f) {
     assert.equal(initial.identity.database, 'cineverse_prod')
     assert.equal(initial.identity.otherDatabaseConnect, false)
     validateProductionRole(initial, 'runtime') // Positive, genuine strict baseline.
+    await t.test('Managed V1 PUBLIC defaults, native boundaries and actual Prisma SQL shadowing', async st => {
+      await testManagedContract(st, { f, admin, runtime, migrator })
+    })
     await exercisePrefixPrivileges(t, admin, inspect, value => validateProductionRole(value, 'runtime'))
     await t.test('production migration inventory sees relations in both pgx and pgworkspace', async () => {
       const inventory = await inspectProductionMigration(adapter(migrator))

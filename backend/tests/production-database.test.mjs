@@ -36,7 +36,7 @@ test('Production runtime/CLI choose distinct named roles, explicit host/target a
   assert.equal(migrator.driver.user, 'cineverse_migrator')
   assert.equal(app.driver.ssl.rejectUnauthorized, true)
   assert.equal(app.driver.ssl.servername, 'db.fixture.test')
-  assert.equal(app.driver.options, '-c search_path=pg_catalog,public')
+  assert.equal(app.driver.options, '-c search_path=pg_catalog,public,pg_temp')
   assert.equal(migrator.driver.max, 1)
   assert.equal(app.driver.max, 3)
   assert.equal(prismaDatasourceUrl(values), migrator.connectionString)

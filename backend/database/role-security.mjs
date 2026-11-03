@@ -1,12 +1,14 @@
 import { DatabaseConfigError } from './config.mjs'
 import { hasVerifiedProviderConnect, verifyProviderConnect } from './provider-connect.mjs'
+import { isManagedV1 } from './provider-policy.mjs'
+import { inspectManagedPrivileges } from './managed-privileges.mjs'
 
 export const applicationTables = ['User', 'Session', 'PasswordResetToken', 'Favorite']
 const fail = (reason) => {
   throw new DatabaseConfigError(`Database production không đạt least privilege (${reason}). Dừng để DBA review; không tự cấp quyền hoặc đổi owner.`)
 }
 
-function validateRolePredicates(snapshot, purpose) {
+function validateRolePredicates(snapshot, purpose, managed = false) {
   const id = snapshot.identity
   const runtime = purpose === 'runtime'
   if (!['runtime', 'migration'].includes(purpose)) fail('PURPOSE')
@@ -16,7 +18,8 @@ function validateRolePredicates(snapshot, purpose) {
   if (id.canLogin !== true || id.superuser !== false || id.createDb !== false ||
     id.createRole !== false || id.replication !== false || id.bypassRls !== false ||
     id.inherit !== false || id.memberships !== 0) fail('ROLE_ATTRIBUTES_OR_MEMBERSHIP')
-  if (id.dbOwner !== false || id.dbConnect !== true || id.dbTemp !== false ||
+  if (id.dbOwner !== false || id.dbConnect !== true ||
+    (id.dbTemp !== false && !(managed && id.dbTemp === true)) ||
     id.dbCreate !== !runtime) fail('DATABASE_PRIVILEGES')
   const schema = snapshot.schemas.find(row => row.name === 'public')
   if (!schema || schema.usage !== true || schema.create !== !runtime) fail('SCHEMA_PRIVILEGES')
@@ -44,7 +47,10 @@ function validateRolePredicates(snapshot, purpose) {
 }
 
 export function validateProductionRole(snapshot, purpose, providerPolicy) {
-  validateRolePredicates(snapshot, purpose)
+  const managed = isManagedV1(providerPolicy)
+  validateRolePredicates(snapshot, purpose, managed)
+  // TEMP also needs proof when there is no effective other-database CONNECT.
+  if (managed && !hasVerifiedProviderConnect(snapshot, providerPolicy)) fail('MANAGED_V1_NOT_VERIFIED')
   validateCrossDatabaseConnect(snapshot, providerPolicy)
 }
 
@@ -127,13 +133,20 @@ export async function inspectRoleSecurity(client) {
 
 export async function assertProductionRole(client, config) {
   if (config.production) {
-    const snapshot = await inspectRoleSecurity(client)
+    const inspect = isManagedV1(config.providerPolicy) ? inspectManagedRoleSecurity : inspectRoleSecurity
+    const snapshot = await inspect(client)
     // Validate all remaining predicates before any additional connection. Final
     // validation retains the original effective cross-database CONNECT flag.
     if (config.providerPolicy) {
-      validateRolePredicates(snapshot, config.purpose)
-      await verifyProviderConnect(client, config, snapshot, inspectRoleSecurity)
+      validateRolePredicates(snapshot, config.purpose, isManagedV1(config.providerPolicy))
+      await verifyProviderConnect(client, config, snapshot, inspect)
     }
     validateProductionRole(snapshot, config.purpose, config.providerPolicy)
   }
+}
+
+export async function inspectManagedRoleSecurity(client) {
+  const snapshot = await inspectRoleSecurity(client)
+  snapshot.managed = await inspectManagedPrivileges(client)
+  return snapshot
 }
